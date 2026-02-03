@@ -38,11 +38,20 @@ All code must be clean and maintainable:
 - **Maximum class length**: 300 lines (refactor into smaller, focused classes)
 - **Maximum nesting depth**: 3 levels
 - **Maximum parameters per method**: 3 (use objects/DTOs for more)
+- **No static "Utils" or "Helper" classes**: Use proper dependency injection and specialized services.
+
+### Dependency & Framework Usage
+- **Minimal Dependencies**: Do not add new NuGet packages without explicit justification and user approval.
+- **Modern C#**: Use modern C# features (records, primary constructors, etc.) where they improve clarity and reduce boilerplate.
+- **Explicit over Implicit**: Avoid "magic" behavior; favor explicit configuration and clear data flow.
+
 
 ### Comments & Documentation
-- Only comment code that requires explanation; avoid obvious comments
-- Use XML documentation for public APIs
+- **Comments are a code smell**: Favor self-documenting code with expressive naming.
+- Only comment code that requires explanation of **intent** or **"why"** (not "how"); avoid obvious comments.
+- Use XML documentation for public APIs.
 - Commit messages must reference OpenSpec task IDs (e.g., `[1.1] Implement XML parser`)
+- **No commented-out code**: Delete it; Git preserves history.
 
 ### Error Handling
 - Use specific exception types, never catch and swallow silently
@@ -57,6 +66,8 @@ All code must be clean and maintainable:
 
 ### Test Requirements
 - Write tests **BEFORE** implementation (red → green → refactor)
+- **Only write ONE failing test at a time.**
+- **All tests MUST pass before writing the next failing test.**
 - **One test = one behavior/scenario**
 - Each test must be independent; run in any order
 - Test naming: Clear, BDD-style (e.g., `When_LargeFileLoaded_Should_ParseCorrectly`)
@@ -76,10 +87,10 @@ public void When_XmlFileIsValid_Should_ParseAllMessages()
     // Arrange
     var xmlContent = @"<messages>...</messages>";
     var parser = new XmlSmsParser();
-    
+
     // Act
     var result = parser.Parse(xmlContent);
-    
+
     // Assert
     Assert.NotEmpty(result);
     Assert.All(result, msg => Assert.NotNull(msg.Content));
@@ -203,6 +214,14 @@ If an agent encounters any of the following, **STOP and escalate to the user**:
 
 ---
 
-**Version**: 1.0  
-**Last Updated**: 2026-02-03  
+**Version**: 1.0
+**Last Updated**: 2026-02-03
+**Status**: ACTIVE - All agents must follow
+- Violations result in PR rejection and resubmission
+- Repeated violations may result in agent reassignment
+
+---
+
+**Version**: 1.0
+**Last Updated**: 2026-02-03
 **Status**: ACTIVE - All agents must follow
