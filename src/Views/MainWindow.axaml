@@ -1,13 +1,14 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:SmsViewer.ViewModels"
+        xmlns:m="using:SmsViewer.Models"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="SmsViewer.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="SmsViewer">
+        Title="SMS Viewer">
 
     <Design.DataContext>
         <!-- This only sets the DataContext for the previewer in an IDE,
@@ -15,6 +16,37 @@
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="5" Margin="5">
+            <Button Command="{Binding OpenXmlFileCommand}" Content="Open SMS Backup..." />
+            <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" Width="100" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <ListBox ItemsSource="{Binding Messages}">
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel />
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+
+            <ListBox.DataTemplates>
+                <DataTemplate DataType="{x:Type m:SmsMessage}">
+                    <Grid ColumnDefinitions="Auto, *, Auto" Margin="5">
+                        <TextBlock Text="{Binding ContactName}" FontWeight="Bold" Margin="0,0,10,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Body}" TextWrapping="Wrap"/>
+                        <TextBlock Grid.Column="2" Text="{Binding ReadableDate}" Foreground="Gray" Margin="10,0,0,0"/>
+                    </Grid>
+                </DataTemplate>
+
+                <DataTemplate DataType="{x:Type m:MmsMessage}">
+                    <Grid ColumnDefinitions="Auto, *, Auto" Margin="5">
+                        <TextBlock Text="{Binding ContactName}" FontWeight="Bold" Margin="0,0,10,0" Foreground="Blue"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Body}" TextWrapping="Wrap" FontStyle="Italic"/>
+                        <TextBlock Grid.Column="2" Text="{Binding ReadableDate}" Foreground="Gray" Margin="10,0,0,0"/>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.DataTemplates>
+        </ListBox>
+    </DockPanel>
 
 </Window>
