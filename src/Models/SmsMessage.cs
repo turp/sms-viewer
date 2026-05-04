@@ -11,4 +11,9 @@ public record SmsMessage(
     int Read,
     int Status,
     string ReadableDate,
-    string ContactName) : IMessage;
+    string ContactName) : IMessage
+{
+    public bool IsSent => Type == 2;
+    public bool IsReceived => !IsSent;
+    public string DisplayBody => Body;
+}

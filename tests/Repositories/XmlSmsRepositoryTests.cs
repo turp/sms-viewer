@@ -42,7 +42,7 @@ public class XmlSmsRepositoryTests
         var xml = """
             <?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
             <smses count="1">
-              <mms address="789" date="1285799668193" read="1" readable_date="Sep 30, 2010" contact_name="Bob">
+              <mms address="789" date="1285799668193" read="1" msg_box="1" readable_date="Sep 30, 2010" contact_name="Bob">
                 <parts>
                   <part ct="text/plain" name="null" text="Mms Body Text" />
                 </parts>
@@ -88,7 +88,7 @@ public class XmlSmsRepositoryTests
             <?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
             <smses count="2">
               <sms address="111" date="1000000000000" type="1" body="SMS one" read="1" status="-1" readable_date="Jan 1, 2000" contact_name="Carol" />
-              <mms address="222" date="1000000001000" read="1" readable_date="Jan 1, 2000" contact_name="Dave">
+              <mms address="222" date="1000000001000" read="1" msg_box="2" readable_date="Jan 1, 2000" contact_name="Dave">
                 <parts>
                   <part ct="text/plain" name="null" text="MMS one" />
                 </parts>
@@ -107,12 +107,67 @@ public class XmlSmsRepositoryTests
     }
 
     [Fact]
+    public async Task When_SmsTypeIsTwo_IsSent_Should_BeTrue()
+    {
+        var xml = """
+            <?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+            <smses count="1">
+              <sms address="111" date="1000" type="2" body="sent" read="1" status="-1" readable_date="Jan 1" contact_name="Alice" />
+            </smses>
+            """;
+
+        var repository = new XmlSmsRepository();
+        var messages = new List<IMessage>();
+        await foreach (var m in repository.GetMessagesAsync(ToStream(xml))) messages.Add(m);
+
+        Assert.True(messages[0].IsSent);
+    }
+
+    [Fact]
+    public async Task When_MmsMsgBoxIsTwo_IsSent_Should_BeTrue()
+    {
+        var xml = """
+            <?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+            <smses count="1">
+              <mms address="222" date="1000" read="1" msg_box="2" readable_date="Jan 1" contact_name="Bob">
+                <parts><part ct="text/plain" name="null" text="sent mms" /></parts>
+              </mms>
+            </smses>
+            """;
+
+        var repository = new XmlSmsRepository();
+        var messages = new List<IMessage>();
+        await foreach (var m in repository.GetMessagesAsync(ToStream(xml))) messages.Add(m);
+
+        Assert.True(messages[0].IsSent);
+    }
+
+    [Fact]
+    public async Task When_MmsHasNoMsgBox_IsSent_Should_BeFalse()
+    {
+        var xml = """
+            <?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+            <smses count="1">
+              <mms address="222" date="1000" read="1" readable_date="Jan 1" contact_name="Bob">
+                <parts><part ct="text/plain" name="null" text="received" /></parts>
+              </mms>
+            </smses>
+            """;
+
+        var repository = new XmlSmsRepository();
+        var messages = new List<IMessage>();
+        await foreach (var m in repository.GetMessagesAsync(ToStream(xml))) messages.Add(m);
+
+        Assert.False(messages[0].IsSent);
+    }
+
+    [Fact]
     public async Task When_MmsIsMissingAddress_Should_SkipIt()
     {
         var xml = """
             <?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
             <smses count="1">
-              <mms date="1285799668193" read="1" readable_date="Sep 30, 2010" contact_name="Bob">
+              <mms date="1285799668193" read="1" msg_box="1" readable_date="Sep 30, 2010" contact_name="Bob">
                 <parts><part ct="text/plain" name="null" text="body" /></parts>
               </mms>
             </smses>

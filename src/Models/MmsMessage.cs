@@ -10,6 +10,12 @@ public record MmsMessage(
     long Date,
     string Body,
     int Read,
+    int MsgBox,
     string ReadableDate,
     string ContactName,
-    IReadOnlyList<MmsPart> Parts) : IMessage;
+    IReadOnlyList<MmsPart> Parts) : IMessage
+{
+    public bool IsSent => MsgBox == 2;
+    public bool IsReceived => !IsSent;
+    public string DisplayBody => string.IsNullOrEmpty(Body) ? "[Media message]" : Body;
+}

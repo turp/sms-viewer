@@ -3,35 +3,34 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
-using SmsViewer.Models;
-using SmsViewer.Repositories;
 using SmsViewer.Services;
 
 namespace SmsViewer.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase
 {
-    private readonly ISmsRepository _repository;
+    private readonly IConversationService _conversationService;
     private readonly IFilePickerService _filePickerService;
     private bool _isLoading;
     private string? _errorMessage;
+    private ConversationListItemViewModel? _selectedConversation;
 
     /// <summary>Parameterless constructor for Avalonia designer support.</summary>
     public MainWindowViewModel()
     {
-        _repository = null!;
+        _conversationService = null!;
         _filePickerService = null!;
         OpenXmlFileCommand = null!;
     }
 
-    public MainWindowViewModel(ISmsRepository repository, IFilePickerService filePickerService)
+    public MainWindowViewModel(IConversationService conversationService, IFilePickerService filePickerService)
     {
-        _repository = repository;
+        _conversationService = conversationService;
         _filePickerService = filePickerService;
         OpenXmlFileCommand = new AsyncRelayCommand(OpenXmlFileAsync);
     }
 
-    public ObservableCollection<IMessage> Messages { get; } = new();
+    public ObservableCollection<ConversationListItemViewModel> Conversations { get; } = new();
 
     public IAsyncRelayCommand OpenXmlFileCommand { get; }
 
@@ -47,6 +46,12 @@ public partial class MainWindowViewModel : ViewModelBase
         set => SetProperty(ref _errorMessage, value);
     }
 
+    public ConversationListItemViewModel? SelectedConversation
+    {
+        get => _selectedConversation;
+        set => SetProperty(ref _selectedConversation, value);
+    }
+
     private async Task OpenXmlFileAsync()
     {
         var filePath = await _filePickerService.PickXmlFileAsync();
@@ -54,15 +59,15 @@ public partial class MainWindowViewModel : ViewModelBase
 
         IsLoading = true;
         ErrorMessage = null;
-        Messages.Clear();
+        Conversations.Clear();
+        SelectedConversation = null;
 
         try
         {
             await using var stream = File.OpenRead(filePath);
-            await foreach (var message in _repository.GetMessagesAsync(stream))
-            {
-                Messages.Add(message);
-            }
+            var conversations = await _conversationService.GetConversationsAsync(stream);
+            foreach (var c in conversations)
+                Conversations.Add(new ConversationListItemViewModel(c));
         }
         catch (FileNotFoundException)
         {

@@ -1,5 +1,3 @@
-using System;
-
 namespace SmsViewer.Models;
 
 /// <summary>
@@ -12,4 +10,7 @@ public interface IMessage
     string Body { get; }
     string ReadableDate { get; }
     string ContactName { get; }
+    bool IsSent { get; }
+    bool IsReceived { get; }
+    string DisplayBody { get; }
 }

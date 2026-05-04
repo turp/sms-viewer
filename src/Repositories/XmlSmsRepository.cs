@@ -66,6 +66,7 @@ public class XmlSmsRepository : ISmsRepository
 
         long date = long.TryParse(dateStr, out var d) ? d : 0;
         int read = int.TryParse(reader.GetAttribute("read"), out var r) ? r : 0;
+        int msgBox = int.TryParse(reader.GetAttribute("msg_box"), out var mb) ? mb : 0;
         string readableDate = reader.GetAttribute("readable_date") ?? string.Empty;
         string contactName = reader.GetAttribute("contact_name") ?? string.Empty;
 
@@ -91,6 +92,6 @@ public class XmlSmsRepository : ISmsRepository
         }
 
         string body = parts.FirstOrDefault(p => p.ContentType == "text/plain")?.Text ?? string.Empty;
-        return new MmsMessage(address, date, body, read, readableDate, contactName, parts);
+        return new MmsMessage(address, date, body, read, msgBox, readableDate, contactName, parts);
     }
 }

@@ -1,11 +1,8 @@
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.CompilerServices;
-using System.Threading;
 using System.Threading.Tasks;
 using Moq;
 using SmsViewer.Models;
-using SmsViewer.Repositories;
 using SmsViewer.Services;
 using SmsViewer.ViewModels;
 using Xunit;
@@ -14,44 +11,38 @@ namespace SmsViewer.Tests.ViewModels;
 
 public class MainWindowViewModelTests
 {
-    private static IMessage MakeSms(string contact = "Alice") =>
-        new SmsMessage("555", 0, 1, "Hello", 1, -1, "Jan 1, 2000", contact);
-
-    private static Mock<ISmsRepository> RepositoryWith(params IMessage[] messages)
+    private static Conversation MakeConversation(string name = "Alice", int count = 1)
     {
-        var mock = new Mock<ISmsRepository>();
-        mock.Setup(r => r.GetMessagesAsync(It.IsAny<Stream>()))
-            .Returns(ToAsyncEnumerable(messages));
+        var messages = new List<IMessage>();
+        for (var i = 0; i < count; i++)
+            messages.Add(new SmsMessage("555", i * 1000L, 1, $"msg {i}", 1, -1, "Jan 1", name));
+        return new Conversation("555", name, messages);
+    }
+
+    private static Mock<IConversationService> ServiceWith(params Conversation[] conversations)
+    {
+        var mock = new Mock<IConversationService>();
+        mock.Setup(s => s.GetConversationsAsync(It.IsAny<Stream>()))
+            .ReturnsAsync((IReadOnlyList<Conversation>)conversations);
         return mock;
     }
 
-    private static async IAsyncEnumerable<IMessage> ToAsyncEnumerable(
-        IEnumerable<IMessage> items,
-        [EnumeratorCancellation] CancellationToken _ = default)
-    {
-        foreach (var item in items)
-        {
-            await Task.Yield();
-            yield return item;
-        }
-    }
-
     [Fact]
-    public async Task When_FilePickerReturnsNull_Should_NotLoadMessages()
+    public async Task When_FilePickerReturnsNull_Should_NotLoadConversations()
     {
         var picker = new Mock<IFilePickerService>();
         picker.Setup(p => p.PickXmlFileAsync()).ReturnsAsync((string?)null);
-        var repo = new Mock<ISmsRepository>();
+        var service = new Mock<IConversationService>();
 
-        var vm = new MainWindowViewModel(repo.Object, picker.Object);
+        var vm = new MainWindowViewModel(service.Object, picker.Object);
         await vm.OpenXmlFileCommand.ExecuteAsync(null)!;
 
-        Assert.Empty(vm.Messages);
-        repo.Verify(r => r.GetMessagesAsync(It.IsAny<Stream>()), Times.Never);
+        Assert.Empty(vm.Conversations);
+        service.Verify(s => s.GetConversationsAsync(It.IsAny<Stream>()), Times.Never);
     }
 
     [Fact]
-    public async Task When_RepositoryStreamsMessages_Should_PopulateCollection()
+    public async Task When_ServiceReturnsConversations_Should_PopulateCollection()
     {
         var file = Path.GetTempFileName();
         try
@@ -60,19 +51,13 @@ public class MainWindowViewModelTests
             var picker = new Mock<IFilePickerService>();
             picker.Setup(p => p.PickXmlFileAsync()).ReturnsAsync(file);
 
-            var sms = MakeSms();
-            var repo = RepositoryWith(sms);
-
-            var vm = new MainWindowViewModel(repo.Object, picker.Object);
+            var vm = new MainWindowViewModel(ServiceWith(MakeConversation()).Object, picker.Object);
             await vm.OpenXmlFileCommand.ExecuteAsync(null)!;
 
-            Assert.Single(vm.Messages);
-            Assert.Equal(sms, vm.Messages[0]);
+            Assert.Single(vm.Conversations);
+            Assert.Equal("Alice", vm.Conversations[0].DisplayName);
         }
-        finally
-        {
-            File.Delete(file);
-        }
+        finally { File.Delete(file); }
     }
 
     [Fact]
@@ -84,17 +69,13 @@ public class MainWindowViewModelTests
             File.WriteAllText(file, "<smses/>");
             var picker = new Mock<IFilePickerService>();
             picker.Setup(p => p.PickXmlFileAsync()).ReturnsAsync(file);
-            var repo = RepositoryWith();
 
-            var vm = new MainWindowViewModel(repo.Object, picker.Object);
+            var vm = new MainWindowViewModel(ServiceWith().Object, picker.Object);
             await vm.OpenXmlFileCommand.ExecuteAsync(null)!;
 
             Assert.False(vm.IsLoading);
         }
-        finally
-        {
-            File.Delete(file);
-        }
+        finally { File.Delete(file); }
     }
 
     [Fact]
@@ -102,17 +83,16 @@ public class MainWindowViewModelTests
     {
         var picker = new Mock<IFilePickerService>();
         picker.Setup(p => p.PickXmlFileAsync()).ReturnsAsync("/nonexistent/path/backup.xml");
-        var repo = new Mock<ISmsRepository>();
 
-        var vm = new MainWindowViewModel(repo.Object, picker.Object);
+        var vm = new MainWindowViewModel(new Mock<IConversationService>().Object, picker.Object);
         await vm.OpenXmlFileCommand.ExecuteAsync(null)!;
 
         Assert.NotNull(vm.ErrorMessage);
-        Assert.Empty(vm.Messages);
+        Assert.Empty(vm.Conversations);
     }
 
     [Fact]
-    public async Task When_NewFileLoaded_Should_ClearPreviousMessages()
+    public async Task When_NewFileLoaded_Should_ClearPreviousConversations()
     {
         var file = Path.GetTempFileName();
         try
@@ -121,25 +101,22 @@ public class MainWindowViewModelTests
             var picker = new Mock<IFilePickerService>();
             picker.Setup(p => p.PickXmlFileAsync()).ReturnsAsync(file);
 
-            var repo = RepositoryWith(MakeSms("First"));
-            var vm = new MainWindowViewModel(repo.Object, picker.Object);
+            var service = ServiceWith(MakeConversation("First"));
+            var vm = new MainWindowViewModel(service.Object, picker.Object);
             await vm.OpenXmlFileCommand.ExecuteAsync(null)!;
-            Assert.Single(vm.Messages);
+            Assert.Single(vm.Conversations);
 
-            repo.Setup(r => r.GetMessagesAsync(It.IsAny<Stream>()))
-                .Returns(ToAsyncEnumerable(new[] { MakeSms("Second"), MakeSms("Third") }));
+            service.Setup(s => s.GetConversationsAsync(It.IsAny<Stream>()))
+                .ReturnsAsync(new[] { MakeConversation("A"), MakeConversation("B") });
             await vm.OpenXmlFileCommand.ExecuteAsync(null)!;
 
-            Assert.Equal(2, vm.Messages.Count);
+            Assert.Equal(2, vm.Conversations.Count);
         }
-        finally
-        {
-            File.Delete(file);
-        }
+        finally { File.Delete(file); }
     }
 
     [Fact]
-    public async Task When_RepositoryThrows_Should_SetErrorMessageAndClearIsLoading()
+    public async Task When_ServiceThrows_Should_SetErrorMessageAndClearIsLoading()
     {
         var file = Path.GetTempFileName();
         try
@@ -148,28 +125,37 @@ public class MainWindowViewModelTests
             var picker = new Mock<IFilePickerService>();
             picker.Setup(p => p.PickXmlFileAsync()).ReturnsAsync(file);
 
-            var repo = new Mock<ISmsRepository>();
-            repo.Setup(r => r.GetMessagesAsync(It.IsAny<Stream>()))
-                .Returns(ThrowingAsyncEnumerable());
+            var service = new Mock<IConversationService>();
+            service.Setup(s => s.GetConversationsAsync(It.IsAny<Stream>()))
+                .ThrowsAsync(new InvalidDataException("Corrupt XML"));
 
-            var vm = new MainWindowViewModel(repo.Object, picker.Object);
+            var vm = new MainWindowViewModel(service.Object, picker.Object);
             await vm.OpenXmlFileCommand.ExecuteAsync(null)!;
 
             Assert.NotNull(vm.ErrorMessage);
             Assert.False(vm.IsLoading);
         }
-        finally
-        {
-            File.Delete(file);
-        }
+        finally { File.Delete(file); }
     }
 
-    private static async IAsyncEnumerable<IMessage> ThrowingAsyncEnumerable()
+    [Fact]
+    public async Task When_NewFileLoaded_Should_ClearSelectedConversation()
     {
-        await Task.Yield();
-        throw new InvalidDataException("Corrupt XML");
-#pragma warning disable CS0162
-        yield break;
-#pragma warning restore CS0162
+        var file = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(file, "<smses/>");
+            var picker = new Mock<IFilePickerService>();
+            picker.Setup(p => p.PickXmlFileAsync()).ReturnsAsync(file);
+
+            var vm = new MainWindowViewModel(ServiceWith(MakeConversation()).Object, picker.Object);
+            await vm.OpenXmlFileCommand.ExecuteAsync(null)!;
+            vm.SelectedConversation = vm.Conversations[0];
+
+            await vm.OpenXmlFileCommand.ExecuteAsync(null)!;
+
+            Assert.Null(vm.SelectedConversation);
+        }
+        finally { File.Delete(file); }
     }
 }
