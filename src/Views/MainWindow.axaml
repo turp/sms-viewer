@@ -35,82 +35,134 @@
         <!-- Two-pane layout -->
         <Grid ColumnDefinitions="250,4,*">
 
-            <!-- Left: conversation list -->
-            <ListBox Grid.Column="0"
-                     ItemsSource="{Binding Conversations}"
-                     SelectedItem="{Binding SelectedConversation}"
-                     BorderThickness="0,0,1,0">
-                <ListBox.ItemTemplate>
-                    <DataTemplate DataType="{x:Type vm:ConversationListItemViewModel}">
-                        <StackPanel Margin="6,4" Spacing="2">
-                            <TextBlock Text="{Binding DisplayName}"
-                                       FontWeight="SemiBold"
-                                       TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{Binding LastMessagePreview}"
-                                       FontSize="11"
-                                       Opacity="0.7"
-                                       TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{Binding LastMessageDate}"
-                                       FontSize="10"
-                                       Opacity="0.5" />
-                        </StackPanel>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
+            <!-- Left: conversation list + search controls -->
+            <DockPanel Grid.Column="0">
+
+                <!-- Search controls -->
+                <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="4,4,4,2">
+                    <TextBox Text="{Binding SearchText}"
+                             Watermark="Search contacts…"
+                             Height="28" />
+                    <Grid ColumnDefinitions="*,4,*">
+                        <TextBox Grid.Column="0"
+                                 Text="{Binding FilterFromDate}"
+                                 Watermark="From yyyy-MM-dd"
+                                 FontSize="11"
+                                 Height="26" />
+                        <TextBox Grid.Column="2"
+                                 Text="{Binding FilterToDate}"
+                                 Watermark="To yyyy-MM-dd"
+                                 FontSize="11"
+                                 Height="26" />
+                    </Grid>
+                </StackPanel>
+
+                <!-- No-results placeholder -->
+                <TextBlock DockPanel.Dock="Top"
+                           Text="No conversations match"
+                           IsVisible="{Binding HasNoConversationResults}"
+                           HorizontalAlignment="Center"
+                           Opacity="0.5"
+                           Margin="0,12" />
+
+                <!-- Conversation list -->
+                <ListBox ItemsSource="{Binding FilteredConversations}"
+                         SelectedItem="{Binding SelectedConversation}"
+                         BorderThickness="0,0,1,0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:ConversationListItemViewModel}">
+                            <StackPanel Margin="6,4" Spacing="2">
+                                <TextBlock Text="{Binding DisplayName}"
+                                           FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding LastMessagePreview}"
+                                           FontSize="11"
+                                           Opacity="0.7"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding LastMessageDate}"
+                                           FontSize="10"
+                                           Opacity="0.5" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+            </DockPanel>
 
             <!-- Splitter -->
             <GridSplitter Grid.Column="1" ResizeDirection="Columns" Width="4" />
 
-            <!-- Right: message thread -->
-            <ScrollViewer Grid.Column="2" HorizontalScrollBarVisibility="Disabled">
-                <ItemsControl ItemsSource="{Binding SelectedConversation.Messages}" Margin="8">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate DataType="{x:Type m:IMessage}">
-                            <Grid Margin="0,3">
+            <!-- Right: thread pane -->
+            <DockPanel Grid.Column="2">
 
-                                <!-- Sent bubble (right) -->
-                                <Border IsVisible="{Binding IsSent}"
-                                        HorizontalAlignment="Right"
-                                        MaxWidth="480"
-                                        Background="#0078D4"
-                                        CornerRadius="12,12,2,12"
-                                        Padding="10,6"
-                                        Margin="60,0,4,0">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding DisplayBody}"
-                                                   Foreground="White"
-                                                   TextWrapping="Wrap" />
-                                        <TextBlock Text="{Binding ReadableDate}"
-                                                   FontSize="10"
-                                                   Foreground="#AAFFFFFF"
-                                                   HorizontalAlignment="Right"
-                                                   Margin="0,3,0,0" />
-                                    </StackPanel>
-                                </Border>
+                <!-- Thread search -->
+                <TextBox DockPanel.Dock="Top"
+                         Text="{Binding ThreadSearchText}"
+                         Watermark="Search messages…"
+                         IsVisible="{Binding SelectedConversation, Converter={x:Static ObjectConverters.IsNotNull}}"
+                         Height="28"
+                         Margin="8,4,8,2" />
 
-                                <!-- Received bubble (left) -->
-                                <Border IsVisible="{Binding IsReceived}"
-                                        HorizontalAlignment="Left"
-                                        MaxWidth="480"
-                                        Background="{DynamicResource SystemControlBackgroundAltMediumLowBrush}"
-                                        CornerRadius="12,12,12,2"
-                                        Padding="10,6"
-                                        Margin="4,0,60,0">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding DisplayBody}"
-                                                   TextWrapping="Wrap" />
-                                        <TextBlock Text="{Binding ReadableDate}"
-                                                   FontSize="10"
-                                                   Opacity="0.6"
-                                                   Margin="0,3,0,0" />
-                                    </StackPanel>
-                                </Border>
+                <!-- No-results placeholder -->
+                <TextBlock DockPanel.Dock="Top"
+                           Text="No messages match"
+                           IsVisible="{Binding HasNoMessageResults}"
+                           HorizontalAlignment="Center"
+                           Opacity="0.5"
+                           Margin="0,12" />
 
-                            </Grid>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+                <!-- Message thread -->
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl ItemsSource="{Binding FilteredMessages}" Margin="8">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type m:IMessage}">
+                                <Grid Margin="0,3">
+
+                                    <!-- Sent bubble (right) -->
+                                    <Border IsVisible="{Binding IsSent}"
+                                            HorizontalAlignment="Right"
+                                            MaxWidth="480"
+                                            Background="#0078D4"
+                                            CornerRadius="12,12,2,12"
+                                            Padding="10,6"
+                                            Margin="60,0,4,0">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding DisplayBody}"
+                                                       Foreground="White"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding ReadableDate}"
+                                                       FontSize="10"
+                                                       Foreground="#AAFFFFFF"
+                                                       HorizontalAlignment="Right"
+                                                       Margin="0,3,0,0" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Received bubble (left) -->
+                                    <Border IsVisible="{Binding IsReceived}"
+                                            HorizontalAlignment="Left"
+                                            MaxWidth="480"
+                                            Background="{DynamicResource SystemControlBackgroundAltMediumLowBrush}"
+                                            CornerRadius="12,12,12,2"
+                                            Padding="10,6"
+                                            Margin="4,0,60,0">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding DisplayBody}"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding ReadableDate}"
+                                                       FontSize="10"
+                                                       Opacity="0.6"
+                                                       Margin="0,3,0,0" />
+                                        </StackPanel>
+                                    </Border>
+
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+            </DockPanel>
 
         </Grid>
     </DockPanel>
