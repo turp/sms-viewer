@@ -1,7 +1,7 @@
 # message-view Specification
 
 ## Purpose
-TBD - created by archiving change display-sms-messages. Update Purpose after archive.
+Defines the requirements for displaying a list of SMS and MMS messages with contact name, body, and date, while keeping the UI responsive during large-file loads.
 ## Requirements
 ### Requirement: Message List Display
 The system SHALL display a scrollable list of messages sorted by date descending.

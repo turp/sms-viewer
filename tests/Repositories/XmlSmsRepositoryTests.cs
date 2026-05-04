@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using SmsViewer.Models;
 using SmsViewer.Repositories;
@@ -9,107 +10,119 @@ namespace SmsViewer.Tests.Repositories;
 
 public class XmlSmsRepositoryTests
 {
+    private static Stream ToStream(string xml) =>
+        new MemoryStream(Encoding.UTF8.GetBytes(xml));
+
     [Fact]
     public async Task When_FileContainsOneSms_Should_ParseCorrectly()
     {
-        // Arrange
-        var xml = @"<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
-<smses count=""1"">
-  <sms address=""123456"" date=""1285799668193"" type=""2"" body=""Hello World"" read=""1"" status=""-1"" readable_date=""Sep 30, 2010"" contact_name=""Alice"" />
-</smses>";
-        var filePath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        await File.WriteAllTextAsync(filePath, xml);
+        var xml = """
+            <?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+            <smses count="1">
+              <sms address="123456" date="1285799668193" type="2" body="Hello World" read="1" status="-1" readable_date="Sep 30, 2010" contact_name="Alice" />
+            </smses>
+            """;
 
-        try
-        {
-            var repository = new XmlSmsRepository();
+        var repository = new XmlSmsRepository();
+        var messages = new List<IMessage>();
+        await foreach (var message in repository.GetMessagesAsync(ToStream(xml)))
+            messages.Add(message);
 
-            // Act
-            var messages = new List<IMessage>();
-            await foreach (var message in repository.GetMessagesAsync(filePath))
-            {
-                messages.Add(message);
-            }
-
-            // Assert
-            Assert.Single(messages);
-            var sms = Assert.IsType<SmsMessage>(messages[0]);
-            Assert.Equal("123456", sms.Address);
-            Assert.Equal("Hello World", sms.Body);
-        }
-        finally
-        {
-            if (File.Exists(filePath)) File.Delete(filePath);
-        }
+        Assert.Single(messages);
+        var sms = Assert.IsType<SmsMessage>(messages[0]);
+        Assert.Equal("123456", sms.Address);
+        Assert.Equal("Hello World", sms.Body);
+        Assert.Equal("Alice", sms.ContactName);
+        Assert.Equal("Sep 30, 2010", sms.ReadableDate);
     }
 
     [Fact]
     public async Task When_FileContainsOneMms_Should_ParseCorrectly()
     {
-        // Arrange
-        var xml = @"<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
-<smses count=""1"">
-  <mms address=""789"" date=""1285799668193"" read=""1"" readable_date=""Sep 30, 2010"" contact_name=""Bob"">
-    <parts>
-      <part ct=""text/plain"" name=""null"" text=""Mms Body Text"" />
-    </parts>
-  </mms>
-</smses>";
-        var filePath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        await File.WriteAllTextAsync(filePath, xml);
+        var xml = """
+            <?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+            <smses count="1">
+              <mms address="789" date="1285799668193" read="1" readable_date="Sep 30, 2010" contact_name="Bob">
+                <parts>
+                  <part ct="text/plain" name="null" text="Mms Body Text" />
+                </parts>
+              </mms>
+            </smses>
+            """;
 
-        try
-        {
-            var repository = new XmlSmsRepository();
+        var repository = new XmlSmsRepository();
+        var messages = new List<IMessage>();
+        await foreach (var message in repository.GetMessagesAsync(ToStream(xml)))
+            messages.Add(message);
 
-            // Act
-            var messages = new List<IMessage>();
-            await foreach (var message in repository.GetMessagesAsync(filePath))
-            {
-                messages.Add(message);
-            }
-
-            // Assert
-            Assert.Single(messages);
-            var mms = Assert.IsType<MmsMessage>(messages[0]);
-            Assert.Equal("789", mms.Address);
-            Assert.Single(mms.Parts);
-            Assert.Equal("Mms Body Text", mms.Parts[0].Text);
-        }
-        finally
-        {
-            if (File.Exists(filePath)) File.Delete(filePath);
-        }
+        Assert.Single(messages);
+        var mms = Assert.IsType<MmsMessage>(messages[0]);
+        Assert.Equal("789", mms.Address);
+        Assert.Equal("Mms Body Text", mms.Body);
+        Assert.Single(mms.Parts);
+        Assert.Equal("Mms Body Text", mms.Parts[0].Text);
     }
 
     [Fact]
     public async Task When_SmsIsMissingRequiredAttribute_Should_SkipIt()
     {
-        // Arrange
-        var xml = @"<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
-<smses count=""1"">
-  <sms date=""1285799668193"" type=""2"" body=""Hello"" read=""1"" status=""-1"" />
-</smses>";
-        var filePath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        await File.WriteAllTextAsync(filePath, xml);
+        var xml = """
+            <?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+            <smses count="1">
+              <sms date="1285799668193" type="2" body="Hello" read="1" status="-1" />
+            </smses>
+            """;
 
-        try
-        {
-            var repository = new XmlSmsRepository();
+        var repository = new XmlSmsRepository();
+        var messages = new List<IMessage>();
+        await foreach (var message in repository.GetMessagesAsync(ToStream(xml)))
+            messages.Add(message);
 
-            // Act
-            var messages = new List<IMessage>();
-            await foreach (var message in repository.GetMessagesAsync(filePath))
-            {
-                messages.Add(message);
-            }
+        Assert.Empty(messages);
+    }
 
-            // Assert
-            Assert.Empty(messages);
-        }
-        finally
-        {
-            if (File.Exists(filePath)) File.Delete(filePath);
-        }
+    [Fact]
+    public async Task When_FileContainsMixedMessages_Should_ParseAll()
+    {
+        var xml = """
+            <?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+            <smses count="2">
+              <sms address="111" date="1000000000000" type="1" body="SMS one" read="1" status="-1" readable_date="Jan 1, 2000" contact_name="Carol" />
+              <mms address="222" date="1000000001000" read="1" readable_date="Jan 1, 2000" contact_name="Dave">
+                <parts>
+                  <part ct="text/plain" name="null" text="MMS one" />
+                </parts>
+              </mms>
+            </smses>
+            """;
+
+        var repository = new XmlSmsRepository();
+        var messages = new List<IMessage>();
+        await foreach (var message in repository.GetMessagesAsync(ToStream(xml)))
+            messages.Add(message);
+
+        Assert.Equal(2, messages.Count);
+        Assert.IsType<SmsMessage>(messages[0]);
+        Assert.IsType<MmsMessage>(messages[1]);
+    }
+
+    [Fact]
+    public async Task When_MmsIsMissingAddress_Should_SkipIt()
+    {
+        var xml = """
+            <?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+            <smses count="1">
+              <mms date="1285799668193" read="1" readable_date="Sep 30, 2010" contact_name="Bob">
+                <parts><part ct="text/plain" name="null" text="body" /></parts>
+              </mms>
+            </smses>
+            """;
+
+        var repository = new XmlSmsRepository();
+        var messages = new List<IMessage>();
+        await foreach (var message in repository.GetMessagesAsync(ToStream(xml)))
+            messages.Add(message);
+
+        Assert.Empty(messages);
     }
 }

@@ -1,7 +1,7 @@
 # xml-parsing Specification
 
 ## Purpose
-TBD - created by archiving change display-sms-messages. Update Purpose after archive.
+Defines the requirements for streaming XML parsing of SMS/MMS backup files using `XmlReader`, ensuring large files are processed without loading the full document into memory.
 ## Requirements
 ### Requirement: XML Streaming Parser
 The system SHALL implement a streaming XML parser using `XmlReader` to process SMS/MMS backup files without loading the entire document into memory.

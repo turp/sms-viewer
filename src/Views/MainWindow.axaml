@@ -11,8 +11,6 @@
         Title="SMS Viewer">
 
     <Design.DataContext>
-        <!-- This only sets the DataContext for the previewer in an IDE,
-             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
@@ -21,6 +19,12 @@
             <Button Command="{Binding OpenXmlFileCommand}" Content="Open SMS Backup..." />
             <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" Width="100" VerticalAlignment="Center" />
         </StackPanel>
+
+        <TextBlock DockPanel.Dock="Top"
+                   Text="{Binding ErrorMessage}"
+                   IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                   Foreground="Red"
+                   Margin="5,0,5,5" />
 
         <ListBox ItemsSource="{Binding Messages}">
             <ListBox.ItemsPanel>

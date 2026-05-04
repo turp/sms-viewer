@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using SmsViewer.Models;
 
 namespace SmsViewer.Repositories;
@@ -9,9 +10,7 @@ namespace SmsViewer.Repositories;
 public interface ISmsRepository
 {
     /// <summary>
-    /// asynchronously streams messages from the specified file path.
+    /// Asynchronously streams messages from the provided XML stream.
     /// </summary>
-    /// <param name="filePath">The absolute path to the XML backup file.</param>
-    /// <returns>An async stream of IMessage objects.</returns>
-    IAsyncEnumerable<IMessage> GetMessagesAsync(string filePath);
+    IAsyncEnumerable<IMessage> GetMessagesAsync(Stream xmlStream);
 }

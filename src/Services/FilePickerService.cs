@@ -1,26 +1,24 @@
-using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
-using Avalonia.Controls;
-using System.Linq;
 
 namespace SmsViewer.Services;
 
 /// <summary>
-/// implements IFilePickerService using Avalonia's StorageProvider.
+/// Implements IFilePickerService using Avalonia's IStorageProvider.
 /// </summary>
 public class FilePickerService : IFilePickerService
 {
-    private readonly Window _target;
+    private readonly IStorageProvider _storageProvider;
 
-    public FilePickerService(Window target)
+    public FilePickerService(IStorageProvider storageProvider)
     {
-        _target = target;
+        _storageProvider = storageProvider;
     }
 
     public async Task<string?> PickXmlFileAsync()
     {
-        var files = await _target.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        var files = await _storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = "Open SMS Backup XML",
             AllowMultiple = false,

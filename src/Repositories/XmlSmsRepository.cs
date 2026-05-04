@@ -8,19 +8,14 @@ using SmsViewer.Models;
 namespace SmsViewer.Repositories;
 
 /// <summary>
-/// implements ISmsRepository using XmlReader for streaming large XML backup files.
+/// Implements ISmsRepository using XmlReader for streaming large XML backup files.
 /// </summary>
 public class XmlSmsRepository : ISmsRepository
 {
-    public async IAsyncEnumerable<IMessage> GetMessagesAsync(string filePath)
+    public async IAsyncEnumerable<IMessage> GetMessagesAsync(Stream xmlStream)
     {
-        if (!File.Exists(filePath))
-        {
-            throw new FileNotFoundException("The specified backup file was not found.", filePath);
-        }
-
         var settings = new XmlReaderSettings { Async = true };
-        using var reader = XmlReader.Create(filePath, settings);
+        using var reader = XmlReader.Create(xmlStream, settings);
 
         while (await reader.ReadAsync())
         {
@@ -47,9 +42,7 @@ public class XmlSmsRepository : ISmsRepository
         string? dateStr = reader.GetAttribute("date");
 
         if (address == null || body == null || dateStr == null)
-        {
             return null;
-        }
 
         return new SmsMessage(
             address,
@@ -69,9 +62,7 @@ public class XmlSmsRepository : ISmsRepository
         string? dateStr = reader.GetAttribute("date");
 
         if (address == null || dateStr == null)
-        {
             return null;
-        }
 
         long date = long.TryParse(dateStr, out var d) ? d : 0;
         int read = int.TryParse(reader.GetAttribute("read"), out var r) ? r : 0;
@@ -85,9 +76,7 @@ public class XmlSmsRepository : ISmsRepository
             while (await reader.ReadAsync())
             {
                 if (reader.NodeType == XmlNodeType.EndElement && reader.Name == "mms")
-                {
                     break;
-                }
 
                 if (reader.NodeType == XmlNodeType.Element && reader.Name == "part")
                 {
@@ -102,7 +91,6 @@ public class XmlSmsRepository : ISmsRepository
         }
 
         string body = parts.FirstOrDefault(p => p.ContentType == "text/plain")?.Text ?? string.Empty;
-
         return new MmsMessage(address, date, body, read, readableDate, contactName, parts);
     }
 }

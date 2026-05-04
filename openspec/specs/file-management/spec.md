@@ -1,7 +1,7 @@
 # file-management Specification
 
 ## Purpose
-TBD - created by archiving change display-sms-messages. Update Purpose after archive.
+Defines the requirements for selecting and validating an XML backup file from the local filesystem, including surfacing file-access errors to the user.
 ## Requirements
 ### Requirement: Open XML File
 The system SHALL provide a way for the user to select an XML file from their local file system.
