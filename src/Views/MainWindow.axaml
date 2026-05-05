@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:SmsViewer.ViewModels"
         xmlns:m="using:SmsViewer.Models"
+        xmlns:converters="using:SmsViewer.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
@@ -10,6 +11,10 @@
         Icon="/Assets/avalonia-logo.ico"
         Title="SMS Viewer"
         MinWidth="600" MinHeight="400">
+
+    <Window.Resources>
+        <converters:ByteArrayToBitmapConverter x:Key="BytesToBitmap" />
+    </Window.Resources>
 
     <Design.DataContext>
         <vm:MainWindowViewModel/>
@@ -115,7 +120,7 @@
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled">
                     <ItemsControl ItemsSource="{Binding FilteredMessages}" Margin="8">
                         <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type m:IMessage}">
+                            <DataTemplate DataType="{x:Type vm:MessageViewModel}">
                                 <Grid Margin="0,3">
 
                                     <!-- Sent bubble (right) -->
@@ -127,9 +132,43 @@
                                             Padding="10,6"
                                             Margin="60,0,4,0">
                                         <StackPanel>
-                                            <TextBlock Text="{Binding DisplayBody}"
-                                                       Foreground="White"
-                                                       TextWrapping="Wrap" />
+                                            <!-- Embedded images -->
+                                            <ItemsControl ItemsSource="{Binding ImageData}"
+                                                          IsVisible="{Binding HasImages}"
+                                                          x:CompileBindings="False">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Image Source="{Binding Converter={StaticResource BytesToBitmap}}"
+                                                               MaxWidth="360" MaxHeight="300"
+                                                               Stretch="Uniform"
+                                                               Margin="0,0,0,4" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <!-- Text with clickable URLs -->
+                                            <ItemsControl ItemsSource="{Binding BodySegments}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate DataType="{x:Type m:BodySegment}">
+                                                        <Panel HorizontalAlignment="Left">
+                                                            <TextBlock Text="{Binding Text}"
+                                                                       IsVisible="{Binding !IsUrl}"
+                                                                       Foreground="White"
+                                                                       TextWrapping="Wrap" />
+                                                            <TextBlock Text="{Binding Text}"
+                                                                       IsVisible="{Binding IsUrl}"
+                                                                       Foreground="#CCE8FF"
+                                                                       TextDecorations="Underline"
+                                                                       Cursor="Hand"
+                                                                       PointerReleased="UrlText_PointerReleased" />
+                                                        </Panel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
                                             <TextBlock Text="{Binding ReadableDate}"
                                                        FontSize="10"
                                                        Foreground="#AAFFFFFF"
@@ -147,8 +186,42 @@
                                             Padding="10,6"
                                             Margin="4,0,60,0">
                                         <StackPanel>
-                                            <TextBlock Text="{Binding DisplayBody}"
-                                                       TextWrapping="Wrap" />
+                                            <!-- Embedded images -->
+                                            <ItemsControl ItemsSource="{Binding ImageData}"
+                                                          IsVisible="{Binding HasImages}"
+                                                          x:CompileBindings="False">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Image Source="{Binding Converter={StaticResource BytesToBitmap}}"
+                                                               MaxWidth="360" MaxHeight="300"
+                                                               Stretch="Uniform"
+                                                               Margin="0,0,0,4" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <!-- Text with clickable URLs -->
+                                            <ItemsControl ItemsSource="{Binding BodySegments}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate DataType="{x:Type m:BodySegment}">
+                                                        <Panel HorizontalAlignment="Left">
+                                                            <TextBlock Text="{Binding Text}"
+                                                                       IsVisible="{Binding !IsUrl}"
+                                                                       TextWrapping="Wrap" />
+                                                            <TextBlock Text="{Binding Text}"
+                                                                       IsVisible="{Binding IsUrl}"
+                                                                       Foreground="#0057A8"
+                                                                       TextDecorations="Underline"
+                                                                       Cursor="Hand"
+                                                                       PointerReleased="UrlText_PointerReleased" />
+                                                        </Panel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
                                             <TextBlock Text="{Binding ReadableDate}"
                                                        FontSize="10"
                                                        Opacity="0.6"

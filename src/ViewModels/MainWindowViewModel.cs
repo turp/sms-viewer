@@ -40,7 +40,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public ObservableCollection<ConversationListItemViewModel> Conversations { get; } = new();
     public ObservableCollection<ConversationListItemViewModel> FilteredConversations { get; } = new();
-    public ObservableCollection<IMessage> FilteredMessages { get; } = new();
+    public ObservableCollection<MessageViewModel> FilteredMessages { get; } = new();
 
     public IAsyncRelayCommand OpenXmlFileCommand { get; }
 
@@ -184,7 +184,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 .ToList();
 
         foreach (var m in source)
-            FilteredMessages.Add(m);
+            FilteredMessages.Add(new MessageViewModel(m));
 
         OnPropertyChanged(nameof(HasNoMessageResults));
     }
