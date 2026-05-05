@@ -4,7 +4,7 @@
 TBD - created by archiving change group-by-conversation. Update Purpose after archive.
 ## Requirements
 ### Requirement: Conversation List Display
-The system SHALL display a scrollable list of conversations in a left pane, sorted by the date of the most recent message descending.
+The system SHALL display a scrollable list of conversations in a left pane, sorted by the date of the most recent message descending. When filters are active, only conversations that satisfy all active filters SHALL be shown.
 
 #### Scenario: Each conversation shows contact display name
 - **WHEN** a conversation is listed
