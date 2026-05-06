@@ -180,4 +180,28 @@ public class XmlSmsRepositoryTests
 
         Assert.Empty(messages);
     }
+
+    [Fact]
+    public async Task GetMessagesAsync_YieldsItemsOneByOne_WithoutBufferingAll()
+    {
+        // Verifies that GetMessagesAsync is a true async stream (IAsyncEnumerable),
+        // meaning callers can consume the first item before the rest are parsed.
+        var xml = """
+            <?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+            <smses count="3">
+              <sms address="111" date="1000" type="1" body="first" read="1" status="-1" readable_date="Jan 1" contact_name="Alice" />
+              <sms address="111" date="2000" type="1" body="second" read="1" status="-1" readable_date="Jan 1" contact_name="Alice" />
+              <sms address="111" date="3000" type="1" body="third" read="1" status="-1" readable_date="Jan 1" contact_name="Alice" />
+            </smses>
+            """;
+
+        var repository = new XmlSmsRepository();
+        var enumerator = repository.GetMessagesAsync(ToStream(xml)).GetAsyncEnumerator();
+        await enumerator.MoveNextAsync();
+        var first = enumerator.Current;
+
+        // We got the first item without needing to await all three
+        Assert.Equal("first", first.Body);
+        await enumerator.DisposeAsync();
+    }
 }

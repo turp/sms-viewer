@@ -5,10 +5,8 @@ using SmsViewer.Models;
 
 namespace SmsViewer.Services;
 
-/// <summary>
-/// Groups messages from a stream into conversations by contact.
-/// </summary>
 public interface IConversationService
 {
-    Task<IReadOnlyList<Conversation>> GetConversationsAsync(Stream xmlStream);
+    Task<IReadOnlyList<ConversationSummary>> GetConversationSummariesAsync(Stream xmlStream);
+    Task<IReadOnlyList<IMessage>> GetConversationMessagesAsync(Stream xmlStream, string address);
 }

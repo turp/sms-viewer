@@ -4,7 +4,7 @@
 TBD - created by archiving change search-and-filter. Update Purpose after archive.
 ## Requirements
 ### Requirement: Live Contact Search
-The system SHALL provide a text input above the conversation list that filters conversations in real time.
+The system SHALL provide a text input above the conversation list that filters conversations in real time. The filter SHALL operate on conversation summary data and SHALL not require loading full thread contents for non-selected conversations.
 
 #### Scenario: Filtering by contact name
 - **WHEN** the user types text into the contact search input
@@ -22,20 +22,9 @@ The system SHALL provide a text input above the conversation list that filters c
 - **WHEN** the search text matches no conversations
 - **THEN** the conversation list SHALL show a "No conversations match" placeholder
 
-### Requirement: Date Range Filter
-The system SHALL provide from-date and to-date inputs that filter the conversation list by the date of each conversation's most recent message.
-
-#### Scenario: Filtering by from-date
-- **WHEN** the user enters a valid from-date
-- **THEN** the conversation list SHALL exclude conversations whose last message date is before the from-date
-
-#### Scenario: Filtering by to-date
-- **WHEN** the user enters a valid to-date
-- **THEN** the conversation list SHALL exclude conversations whose last message date is after the to-date
-
-#### Scenario: Invalid date input is ignored
-- **WHEN** the user enters a value that cannot be parsed as a date
-- **THEN** the date bound SHALL be treated as absent and no date filtering SHALL be applied for that bound
+#### Scenario: Search does not require non-selected threads to load
+- **WHEN** the user filters the conversation list in a large backup
+- **THEN** the system SHALL evaluate the filter without loading full thread contents for conversations that are not selected
 
 ### Requirement: Filter Reset on File Load
 The system SHALL reset all conversation filters when a new file is loaded.

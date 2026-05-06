@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using SmsViewer.Models;
 using SmsViewer.ViewModels;
 using Xunit;
@@ -7,66 +6,54 @@ namespace SmsViewer.Tests.ViewModels;
 
 public class ConversationListItemViewModelTests
 {
-    private static IMessage Sms(long date, string body, string contact = "Alice") =>
-        new SmsMessage("555", date, 1, body, 1, -1, "Jan 1", contact);
+    private static ConversationSummary Summary(
+        string address = "555",
+        string contactName = "Alice",
+        string preview = "Hi",
+        string date = "Jan 1",
+        long dateMs = 1000,
+        int count = 1) =>
+        new(address, contactName, preview, date, dateMs, count);
 
     [Fact]
     public void DisplayName_Should_BeContactName_WhenSet()
     {
-        var conversation = new Conversation("555", "Alice", new[] { Sms(1000, "Hi") });
-        var vm = new ConversationListItemViewModel(conversation);
+        var vm = new ConversationListItemViewModel(Summary(contactName: "Alice"));
         Assert.Equal("Alice", vm.DisplayName);
     }
 
     [Fact]
-    public void DisplayName_Should_FallBackToAddress_WhenContactNameIsNull_String()
+    public void DisplayName_Should_FallBackToAddress_WhenContactNameIsNullString()
     {
-        var conversation = new Conversation("555", "null", new[] { Sms(1000, "Hi", "null") });
-        var vm = new ConversationListItemViewModel(conversation);
+        var vm = new ConversationListItemViewModel(Summary(address: "555", contactName: "null"));
         Assert.Equal("555", vm.DisplayName);
     }
 
     [Fact]
-    public void LastMessagePreview_Should_BeLastMessageBody()
+    public void LastMessagePreview_Should_ExposePreviewFromSummary()
     {
-        var conversation = new Conversation("555", "Alice", new[]
-        {
-            Sms(1000, "First"),
-            Sms(2000, "Last")
-        });
-        var vm = new ConversationListItemViewModel(conversation);
-        Assert.Equal("Last", vm.LastMessagePreview);
+        var vm = new ConversationListItemViewModel(Summary(preview: "Last message"));
+        Assert.Equal("Last message", vm.LastMessagePreview);
     }
 
     [Fact]
-    public void LastMessagePreview_Should_BeTruncatedAt60Chars()
+    public void MessageCount_Should_ReflectSummaryCount()
     {
-        var longBody = new string('x', 80);
-        var conversation = new Conversation("555", "Alice", new[] { Sms(1000, longBody) });
-        var vm = new ConversationListItemViewModel(conversation);
-        Assert.Equal(61, vm.LastMessagePreview.Length); // 60 chars + ellipsis (1 char)
-        Assert.EndsWith("…", vm.LastMessagePreview);
-    }
-
-    [Fact]
-    public void MessageCount_Should_ReflectNumberOfMessages()
-    {
-        var conversation = new Conversation("555", "Alice", new[]
-        {
-            Sms(1000, "a"),
-            Sms(2000, "b"),
-            Sms(3000, "c")
-        });
-        var vm = new ConversationListItemViewModel(conversation);
+        var vm = new ConversationListItemViewModel(Summary(count: 3));
         Assert.Equal(3, vm.MessageCount);
     }
 
     [Fact]
-    public void Messages_Should_ExposeSameCollectionAsConversation()
+    public void Address_Should_ExposeAddressFromSummary()
     {
-        var messages = new List<IMessage> { Sms(1000, "hi") };
-        var conversation = new Conversation("555", "Alice", messages);
-        var vm = new ConversationListItemViewModel(conversation);
-        Assert.Same(messages, vm.Messages);
+        var vm = new ConversationListItemViewModel(Summary(address: "999"));
+        Assert.Equal("999", vm.Address);
+    }
+
+    [Fact]
+    public void LastMessageDateUnixMs_Should_ExposeFromSummary()
+    {
+        var vm = new ConversationListItemViewModel(Summary(dateMs: 99999L));
+        Assert.Equal(99999L, vm.LastMessageDateUnixMs);
     }
 }

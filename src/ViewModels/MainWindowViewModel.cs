@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
@@ -15,6 +16,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly IConversationService _conversationService;
     private readonly IFilePickerService _filePickerService;
     private bool _isLoading;
+    private bool _isThreadLoading;
     private string? _errorMessage;
     private ConversationListItemViewModel? _selectedConversation;
     private string _searchText = string.Empty;
@@ -22,6 +24,8 @@ public partial class MainWindowViewModel : ViewModelBase
     private string _filterToDate = string.Empty;
     private string _threadSearchText = string.Empty;
     private bool _conversationsLoaded;
+    private string? _currentFilePath;
+    private List<IMessage> _loadedMessages = new();
 
     /// <summary>Parameterless constructor for Avalonia designer support.</summary>
     public MainWindowViewModel()
@@ -50,6 +54,12 @@ public partial class MainWindowViewModel : ViewModelBase
         set => SetProperty(ref _isLoading, value);
     }
 
+    public bool IsThreadLoading
+    {
+        get => _isThreadLoading;
+        set => SetProperty(ref _isThreadLoading, value);
+    }
+
     public string? ErrorMessage
     {
         get => _errorMessage;
@@ -65,10 +75,13 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 _threadSearchText = string.Empty;
                 OnPropertyChanged(nameof(ThreadSearchText));
-                ApplyMessageFilter();
+                ThreadLoadTask = LoadSelectedThreadAsync();
             }
         }
     }
+
+    /// <summary>Exposed so tests can await the async thread load triggered by SelectedConversation changes.</summary>
+    public Task? ThreadLoadTask { get; private set; }
 
     public string SearchText
     {
@@ -98,7 +111,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _conversationsLoaded && FilteredConversations.Count == 0;
 
     public bool HasNoMessageResults =>
-        SelectedConversation != null && FilteredMessages.Count == 0;
+        SelectedConversation != null && !IsThreadLoading && FilteredMessages.Count == 0;
 
     private async Task OpenXmlFileAsync()
     {
@@ -108,25 +121,28 @@ public partial class MainWindowViewModel : ViewModelBase
         IsLoading = true;
         ErrorMessage = null;
         _conversationsLoaded = false;
+        _currentFilePath = null;
 
         // Reset filter state without triggering cascading filter calls
-        _searchText = string.Empty;      OnPropertyChanged(nameof(SearchText));
-        _filterFromDate = string.Empty;  OnPropertyChanged(nameof(FilterFromDate));
-        _filterToDate = string.Empty;    OnPropertyChanged(nameof(FilterToDate));
+        _searchText = string.Empty;       OnPropertyChanged(nameof(SearchText));
+        _filterFromDate = string.Empty;   OnPropertyChanged(nameof(FilterFromDate));
+        _filterToDate = string.Empty;     OnPropertyChanged(nameof(FilterToDate));
         _threadSearchText = string.Empty; OnPropertyChanged(nameof(ThreadSearchText));
 
         Conversations.Clear();
         FilteredConversations.Clear();
         FilteredMessages.Clear();
+        _loadedMessages.Clear();
         _selectedConversation = null;
         OnPropertyChanged(nameof(SelectedConversation));
 
         try
         {
             await using var stream = File.OpenRead(filePath);
-            var conversations = await _conversationService.GetConversationsAsync(stream);
-            foreach (var c in conversations)
-                Conversations.Add(new ConversationListItemViewModel(c));
+            var summaries = await _conversationService.GetConversationSummariesAsync(stream);
+            foreach (var s in summaries)
+                Conversations.Add(new ConversationListItemViewModel(s));
+            _currentFilePath = filePath;
             _conversationsLoaded = true;
             ApplyConversationFilter();
         }
@@ -146,6 +162,27 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             IsLoading = false;
             OnPropertyChanged(nameof(HasNoConversationResults));
+        }
+    }
+
+    private async Task LoadSelectedThreadAsync()
+    {
+        FilteredMessages.Clear();
+        _loadedMessages.Clear();
+        if (_selectedConversation == null || _currentFilePath == null) return;
+
+        IsThreadLoading = true;
+        try
+        {
+            await using var stream = File.OpenRead(_currentFilePath);
+            var messages = await _conversationService.GetConversationMessagesAsync(stream, _selectedConversation.Address);
+            _loadedMessages = messages.ToList();
+            ApplyMessageFilter();
+        }
+        finally
+        {
+            IsThreadLoading = false;
+            OnPropertyChanged(nameof(HasNoMessageResults));
         }
     }
 
@@ -178,10 +215,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
         var search = _threadSearchText.Trim();
         var source = string.IsNullOrEmpty(search)
-            ? _selectedConversation.Messages
-            : _selectedConversation.Messages
-                .Where(m => m.DisplayBody.Contains(search, StringComparison.OrdinalIgnoreCase))
-                .ToList();
+            ? _loadedMessages
+            : _loadedMessages.Where(m => m.DisplayBody.Contains(search, StringComparison.OrdinalIgnoreCase)).ToList();
 
         foreach (var m in source)
             FilteredMessages.Add(new MessageViewModel(m));

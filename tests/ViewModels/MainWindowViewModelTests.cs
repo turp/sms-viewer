@@ -11,19 +11,16 @@ namespace SmsViewer.Tests.ViewModels;
 
 public class MainWindowViewModelTests
 {
-    private static Conversation MakeConversation(string name = "Alice", int count = 1)
-    {
-        var messages = new List<IMessage>();
-        for (var i = 0; i < count; i++)
-            messages.Add(new SmsMessage("555", i * 1000L, 1, $"msg {i}", 1, -1, "Jan 1", name));
-        return new Conversation("555", name, messages);
-    }
+    private static ConversationSummary MakeSummary(string name = "Alice", string address = "555", long dateMs = 1000, int count = 1) =>
+        new(address, name, "preview", "Jan 1", dateMs, count);
 
-    private static Mock<IConversationService> ServiceWith(params Conversation[] conversations)
+    private static Mock<IConversationService> ServiceWith(params ConversationSummary[] summaries)
     {
         var mock = new Mock<IConversationService>();
-        mock.Setup(s => s.GetConversationsAsync(It.IsAny<Stream>()))
-            .ReturnsAsync((IReadOnlyList<Conversation>)conversations);
+        mock.Setup(s => s.GetConversationSummariesAsync(It.IsAny<Stream>()))
+            .ReturnsAsync((IReadOnlyList<ConversationSummary>)summaries);
+        mock.Setup(s => s.GetConversationMessagesAsync(It.IsAny<Stream>(), It.IsAny<string>()))
+            .ReturnsAsync(new List<IMessage>());
         return mock;
     }
 
@@ -38,7 +35,7 @@ public class MainWindowViewModelTests
         await vm.OpenXmlFileCommand.ExecuteAsync(null)!;
 
         Assert.Empty(vm.Conversations);
-        service.Verify(s => s.GetConversationsAsync(It.IsAny<Stream>()), Times.Never);
+        service.Verify(s => s.GetConversationSummariesAsync(It.IsAny<Stream>()), Times.Never);
     }
 
     [Fact]
@@ -51,7 +48,7 @@ public class MainWindowViewModelTests
             var picker = new Mock<IFilePickerService>();
             picker.Setup(p => p.PickXmlFileAsync()).ReturnsAsync(file);
 
-            var vm = new MainWindowViewModel(ServiceWith(MakeConversation()).Object, picker.Object);
+            var vm = new MainWindowViewModel(ServiceWith(MakeSummary()).Object, picker.Object);
             await vm.OpenXmlFileCommand.ExecuteAsync(null)!;
 
             Assert.Single(vm.Conversations);
@@ -101,13 +98,13 @@ public class MainWindowViewModelTests
             var picker = new Mock<IFilePickerService>();
             picker.Setup(p => p.PickXmlFileAsync()).ReturnsAsync(file);
 
-            var service = ServiceWith(MakeConversation("First"));
+            var service = ServiceWith(MakeSummary("First"));
             var vm = new MainWindowViewModel(service.Object, picker.Object);
             await vm.OpenXmlFileCommand.ExecuteAsync(null)!;
             Assert.Single(vm.Conversations);
 
-            service.Setup(s => s.GetConversationsAsync(It.IsAny<Stream>()))
-                .ReturnsAsync(new[] { MakeConversation("A"), MakeConversation("B") });
+            service.Setup(s => s.GetConversationSummariesAsync(It.IsAny<Stream>()))
+                .ReturnsAsync(new[] { MakeSummary("A"), MakeSummary("B") });
             await vm.OpenXmlFileCommand.ExecuteAsync(null)!;
 
             Assert.Equal(2, vm.Conversations.Count);
@@ -126,7 +123,7 @@ public class MainWindowViewModelTests
             picker.Setup(p => p.PickXmlFileAsync()).ReturnsAsync(file);
 
             var service = new Mock<IConversationService>();
-            service.Setup(s => s.GetConversationsAsync(It.IsAny<Stream>()))
+            service.Setup(s => s.GetConversationSummariesAsync(It.IsAny<Stream>()))
                 .ThrowsAsync(new InvalidDataException("Corrupt XML"));
 
             var vm = new MainWindowViewModel(service.Object, picker.Object);
@@ -148,12 +145,61 @@ public class MainWindowViewModelTests
             var picker = new Mock<IFilePickerService>();
             picker.Setup(p => p.PickXmlFileAsync()).ReturnsAsync(file);
 
-            var vm = new MainWindowViewModel(ServiceWith(MakeConversation()).Object, picker.Object);
+            var vm = new MainWindowViewModel(ServiceWith(MakeSummary()).Object, picker.Object);
             await vm.OpenXmlFileCommand.ExecuteAsync(null)!;
             vm.SelectedConversation = vm.Conversations[0];
+            await vm.ThreadLoadTask!;
 
             await vm.OpenXmlFileCommand.ExecuteAsync(null)!;
 
+            Assert.Null(vm.SelectedConversation);
+        }
+        finally { File.Delete(file); }
+    }
+
+    [Fact]
+    public async Task When_ConversationSelected_Should_LoadThreadMessages()
+    {
+        var file = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(file, "<smses/>");
+            var picker = new Mock<IFilePickerService>();
+            picker.Setup(p => p.PickXmlFileAsync()).ReturnsAsync(file);
+
+            var messages = new List<IMessage>
+            {
+                new SmsMessage("555", 1000, 1, "hello", 1, -1, "Jan 1", "Alice"),
+                new SmsMessage("555", 2000, 1, "world", 1, -1, "Jan 1", "Alice"),
+            };
+            var service = ServiceWith(MakeSummary());
+            service.Setup(s => s.GetConversationMessagesAsync(It.IsAny<Stream>(), "555"))
+                .ReturnsAsync(messages);
+
+            var vm = new MainWindowViewModel(service.Object, picker.Object);
+            await vm.OpenXmlFileCommand.ExecuteAsync(null)!;
+            vm.SelectedConversation = vm.Conversations[0];
+            await vm.ThreadLoadTask!;
+
+            Assert.Equal(2, vm.FilteredMessages.Count);
+        }
+        finally { File.Delete(file); }
+    }
+
+    [Fact]
+    public async Task EmptyThreadState_Before_ConversationSelected()
+    {
+        var file = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(file, "<smses/>");
+            var picker = new Mock<IFilePickerService>();
+            picker.Setup(p => p.PickXmlFileAsync()).ReturnsAsync(file);
+
+            var vm = new MainWindowViewModel(ServiceWith(MakeSummary()).Object, picker.Object);
+            await vm.OpenXmlFileCommand.ExecuteAsync(null)!;
+
+            Assert.Empty(vm.FilteredMessages);
             Assert.Null(vm.SelectedConversation);
         }
         finally { File.Delete(file); }

@@ -7,9 +7,6 @@ using SmsViewer.Repositories;
 
 namespace SmsViewer.Services;
 
-/// <summary>
-/// Implements IConversationService by grouping repository messages by address.
-/// </summary>
 public class ConversationService : IConversationService
 {
     private readonly ISmsRepository _repository;
@@ -19,27 +16,44 @@ public class ConversationService : IConversationService
         _repository = repository;
     }
 
-    public async Task<IReadOnlyList<Conversation>> GetConversationsAsync(Stream xmlStream)
+    public async Task<IReadOnlyList<ConversationSummary>> GetConversationSummariesAsync(Stream xmlStream)
     {
-        var groups = new Dictionary<string, (string contactName, List<IMessage> messages)>();
+        var groups = new Dictionary<string, (string contactName, long lastDate, string lastReadableDate, string lastBody, int count)>();
 
         await foreach (var message in _repository.GetMessagesAsync(xmlStream))
         {
-            if (!groups.TryGetValue(message.Address, out var group))
-            {
-                group = (message.ContactName, new List<IMessage>());
-                groups[message.Address] = group;
-            }
-            group.messages.Add(message);
+            if (!groups.TryGetValue(message.Address, out var g))
+                g = (message.ContactName, 0, string.Empty, string.Empty, 0);
+
+            bool isNewer = message.Date >= g.lastDate;
+            groups[message.Address] = (
+                message.ContactName,
+                isNewer ? message.Date : g.lastDate,
+                isNewer ? message.ReadableDate : g.lastReadableDate,
+                isNewer ? message.DisplayBody : g.lastBody,
+                g.count + 1
+            );
         }
 
         return groups
             .Select(kvp =>
             {
-                var sorted = kvp.Value.messages.OrderBy(m => m.Date).ToList();
-                return new Conversation(kvp.Key, kvp.Value.contactName, sorted);
+                var (contactName, lastDate, lastReadableDate, lastBody, count) = kvp.Value;
+                var preview = lastBody.Length > 60 ? lastBody[..60] + "…" : lastBody;
+                return new ConversationSummary(kvp.Key, contactName, preview, lastReadableDate, lastDate, count);
             })
-            .OrderByDescending(c => c.Messages[^1].Date)
+            .OrderByDescending(s => s.LastMessageDateUnixMs)
             .ToList();
+    }
+
+    public async Task<IReadOnlyList<IMessage>> GetConversationMessagesAsync(Stream xmlStream, string address)
+    {
+        var messages = new List<IMessage>();
+        await foreach (var message in _repository.GetMessagesAsync(xmlStream))
+        {
+            if (message.Address == address)
+                messages.Add(message);
+        }
+        return messages.OrderBy(m => m.Date).ToList();
     }
 }

@@ -9,16 +9,18 @@ public sealed class MessageViewModel
 {
     private static readonly Regex UrlRegex = new(@"https?://\S+", RegexOptions.Compiled);
 
+    private readonly IMessage _message;
+    private IReadOnlyList<BodySegment>? _bodySegments;
+    private IReadOnlyList<byte[]>? _imageData;
+
     public MessageViewModel(IMessage message)
     {
+        _message = message;
         IsSent = message.IsSent;
         IsReceived = message.IsReceived;
         ReadableDate = message.ReadableDate;
         Body = message.Body;
         DisplayBody = message.DisplayBody;
-        BodySegments = ParseSegments(message.DisplayBody);
-        ImageData = DecodeImages(message);
-        HasImages = ImageData.Count > 0;
     }
 
     public bool IsSent { get; }
@@ -26,10 +28,10 @@ public sealed class MessageViewModel
     public string ReadableDate { get; }
     public string Body { get; }
     public string DisplayBody { get; }
-    public IReadOnlyList<BodySegment> BodySegments { get; }
-    /// <summary>Raw bytes for each embedded image, decoded from base64 MMS parts.</summary>
-    public IReadOnlyList<byte[]> ImageData { get; }
-    public bool HasImages { get; }
+
+    public IReadOnlyList<BodySegment> BodySegments => _bodySegments ??= ParseSegments(DisplayBody);
+    public IReadOnlyList<byte[]> ImageData => _imageData ??= DecodeImages(_message);
+    public bool HasImages => ImageData.Count > 0;
 
     private static IReadOnlyList<BodySegment> ParseSegments(string text)
     {
