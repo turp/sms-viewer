@@ -35,7 +35,7 @@ jobs:
         run: >
           vpk pack
           --packId SmsViewer
-          --version ${{ env.VERSION }}
+          --packVersion ${{ env.VERSION }}
           --packDir publish/
           --mainExe SmsViewer.exe
           --outputDir dist/
@@ -70,7 +70,7 @@ jobs:
         run: >
           vpk pack
           --packId SmsViewer
-          --version ${{ env.VERSION }}
+          --packVersion ${{ env.VERSION }}
           --packDir publish/
           --mainExe SmsViewer
           --outputDir dist/
