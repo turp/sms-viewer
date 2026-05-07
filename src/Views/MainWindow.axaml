@@ -22,6 +22,24 @@
 
     <DockPanel>
 
+        <!-- Update available banner -->
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding UpdateAvailable}"
+                Background="#1a6a1a"
+                Padding="10,6">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <TextBlock Text="{Binding AvailableVersion, StringFormat='Version {0} is available'}"
+                           Foreground="White"
+                           VerticalAlignment="Center" />
+                <Button Command="{Binding RestartToUpdateCommand}"
+                        Content="Restart to update"
+                        Padding="8,3" />
+                <Button Command="{Binding DismissUpdateCommand}"
+                        Content="Dismiss"
+                        Padding="8,3" />
+            </StackPanel>
+        </Border>
+
         <!-- Toolbar -->
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="8,6">
             <Button Command="{Binding OpenXmlFileCommand}" Content="Open SMS Backup…" />

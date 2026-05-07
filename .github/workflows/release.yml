@@ -1,0 +1,113 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+env:
+  DOTNET_VERSION: '10.0.x'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install Velopack CLI
+        run: dotnet tool install -g vpk
+
+      - name: Set version (strip leading 'v')
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      - name: Publish (self-contained, win-x64)
+        run: >
+          dotnet publish src/SmsViewer.csproj
+          -c Release -r win-x64 --self-contained
+          -o publish/
+
+      - name: Package with Velopack
+        run: >
+          vpk pack
+          --packId SmsViewer
+          --version ${{ env.VERSION }}
+          --packDir publish/
+          --mainExe SmsViewer.exe
+          --outputDir dist/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-windows
+          path: dist/
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install Velopack CLI
+        run: dotnet tool install -g vpk
+
+      - name: Set version (strip leading 'v')
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      - name: Publish (self-contained, linux-x64)
+        run: >
+          dotnet publish src/SmsViewer.csproj
+          -c Release -r linux-x64 --self-contained
+          -o publish/
+
+      - name: Package with Velopack
+        run: >
+          vpk pack
+          --packId SmsViewer
+          --version ${{ env.VERSION }}
+          --packDir publish/
+          --mainExe SmsViewer
+          --outputDir dist/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-linux
+          path: dist/
+
+  release:
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install Velopack CLI
+        run: dotnet tool install -g vpk
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages-windows
+          path: dist/
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages-linux
+          path: dist/
+
+      - name: Publish to GitHub Releases
+        # TODO: replace OWNER/REPO with the actual GitHub repository path
+        run: >
+          vpk upload github
+          --repoUrl https://github.com/turp/sms-viewer
+          --token ${{ secrets.GITHUB_TOKEN }}
+          --outputDir dist/
+          --tag ${{ github.ref_name }}

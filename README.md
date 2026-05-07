@@ -10,6 +10,19 @@ A cross-platform SMS message reader application built with C# and Avalonia. Pars
 - **Export**: Save filtered messages as CSV
 - **Statistics**: View thread summaries and message counts
 
+## Installation
+
+Pre-built installers are available on the [GitHub Releases](https://github.com/OWNER/REPO/releases) page.
+
+| Platform | Download |
+|---|---|
+| Windows | `SmsViewer-Setup.exe` |
+| Linux | `SmsViewer.AppImage` |
+
+**Linux note:** AppImage requires FUSE 2 (`libfuse2`) to be installed on the host system. On Ubuntu 22.04+ run `sudo apt install libfuse2`.
+
+Once installed, the app checks for updates automatically on startup and will notify you when a new version is available.
+
 ## Development
 
 This project uses **OpenSpec** for specification-driven development. See `AGENTS.md` for the development constitution that all contributors must follow.

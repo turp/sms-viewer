@@ -15,9 +15,12 @@ public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly IConversationService _conversationService;
     private readonly IFilePickerService _filePickerService;
+    private readonly IUpdateService? _updateService;
     private bool _isLoading;
     private bool _isThreadLoading;
     private string? _errorMessage;
+    private bool _updateAvailable;
+    private string? _availableVersion;
     private ConversationListItemViewModel? _selectedConversation;
     private string _searchText = string.Empty;
     private string _filterFromDate = string.Empty;
@@ -33,13 +36,21 @@ public partial class MainWindowViewModel : ViewModelBase
         _conversationService = null!;
         _filePickerService = null!;
         OpenXmlFileCommand = null!;
+        RestartToUpdateCommand = null!;
+        DismissUpdateCommand = null!;
     }
 
-    public MainWindowViewModel(IConversationService conversationService, IFilePickerService filePickerService)
+    public MainWindowViewModel(IConversationService conversationService, IFilePickerService filePickerService, IUpdateService? updateService = null)
     {
         _conversationService = conversationService;
         _filePickerService = filePickerService;
+        _updateService = updateService;
         OpenXmlFileCommand = new AsyncRelayCommand(OpenXmlFileAsync);
+        RestartToUpdateCommand = new AsyncRelayCommand(RestartToUpdateAsync);
+        DismissUpdateCommand = new RelayCommand(() => UpdateAvailable = false);
+
+        if (_updateService != null)
+            UpdateCheckTask = RunUpdateCheckAsync();
     }
 
     public ObservableCollection<ConversationListItemViewModel> Conversations { get; } = new();
@@ -47,6 +58,11 @@ public partial class MainWindowViewModel : ViewModelBase
     public ObservableCollection<MessageViewModel> FilteredMessages { get; } = new();
 
     public IAsyncRelayCommand OpenXmlFileCommand { get; }
+    public IAsyncRelayCommand RestartToUpdateCommand { get; }
+    public IRelayCommand DismissUpdateCommand { get; }
+
+    /// <summary>Exposed so tests can await the async update check triggered on construction.</summary>
+    public Task? UpdateCheckTask { get; private set; }
 
     public bool IsLoading
     {
@@ -64,6 +80,18 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         get => _errorMessage;
         set => SetProperty(ref _errorMessage, value);
+    }
+
+    public bool UpdateAvailable
+    {
+        get => _updateAvailable;
+        set => SetProperty(ref _updateAvailable, value);
+    }
+
+    public string? AvailableVersion
+    {
+        get => _availableVersion;
+        set => SetProperty(ref _availableVersion, value);
     }
 
     public ConversationListItemViewModel? SelectedConversation
@@ -112,6 +140,19 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public bool HasNoMessageResults =>
         SelectedConversation != null && !IsThreadLoading && FilteredMessages.Count == 0;
+
+    private async Task RunUpdateCheckAsync()
+    {
+        var hasUpdate = await _updateService!.CheckForUpdateAsync();
+        if (hasUpdate)
+        {
+            AvailableVersion = _updateService.AvailableVersion;
+            UpdateAvailable = true;
+        }
+    }
+
+    private Task RestartToUpdateAsync() =>
+        _updateService?.ApplyUpdateAndRestartAsync() ?? Task.CompletedTask;
 
     private async Task OpenXmlFileAsync()
     {

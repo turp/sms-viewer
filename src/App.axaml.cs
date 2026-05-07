@@ -30,8 +30,9 @@ public partial class App : Application
             var repository = new XmlSmsRepository();
             var conversationService = new ConversationService(repository);
             var filePickerService = new FilePickerService(mainWindow.StorageProvider);
+            var updateService = new UpdateService();
 
-            mainWindow.DataContext = new MainWindowViewModel(conversationService, filePickerService);
+            mainWindow.DataContext = new MainWindowViewModel(conversationService, filePickerService, updateService);
             desktop.MainWindow = mainWindow;
         }
 
