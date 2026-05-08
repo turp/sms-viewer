@@ -30,6 +30,13 @@ public class ConversationListItemViewModelTests
     }
 
     [Fact]
+    public void DisplayName_Should_FallBackToAddress_WhenContactNameIsUnknown()
+    {
+        var vm = new ConversationListItemViewModel(Summary(address: "+15551234567", contactName: "(Unknown)"));
+        Assert.Equal("+15551234567", vm.DisplayName);
+    }
+
+    [Fact]
     public void LastMessagePreview_Should_ExposePreviewFromSummary()
     {
         var vm = new ConversationListItemViewModel(Summary(preview: "Last message"));

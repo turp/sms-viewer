@@ -182,6 +182,34 @@ public class XmlSmsRepositoryTests
     }
 
     [Fact]
+    public async Task When_MmsHasAddrElements_Should_ParsePhoneAddrs_AndSkipRcsHashes()
+    {
+        var xml = """
+            <?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+            <smses count="1">
+              <mms address="hash@rcs.google.com" date="1000" read="1" msg_box="1" readable_date="Jan 1" contact_name="(Unknown)">
+                <parts><part ct="text/plain" name="null" text="hi" /></parts>
+                <addrs>
+                  <addr address="+11111111111" type="137" charset="106" />
+                  <addr address="+12222222222" type="151" charset="106" />
+                  <addr address="other@rcs.google.com" type="151" charset="106" />
+                </addrs>
+              </mms>
+            </smses>
+            """;
+
+        var repository = new XmlSmsRepository();
+        var messages = new List<IMessage>();
+        await foreach (var message in repository.GetMessagesAsync(ToStream(xml)))
+            messages.Add(message);
+
+        var mms = Assert.IsType<MmsMessage>(messages[0]);
+        Assert.Equal(2, mms.Addrs.Count);
+        Assert.Contains("+11111111111", mms.Addrs);
+        Assert.Contains("+12222222222", mms.Addrs);
+    }
+
+    [Fact]
     public async Task GetMessagesAsync_YieldsItemsOneByOne_WithoutBufferingAll()
     {
         // Verifies that GetMessagesAsync is a true async stream (IAsyncEnumerable),

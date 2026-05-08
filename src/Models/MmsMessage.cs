@@ -15,6 +15,7 @@ public record MmsMessage(
     string ContactName,
     IReadOnlyList<MmsPart> Parts) : IMessage
 {
+    public IReadOnlyList<string> Addrs { get; init; } = [];
     public bool IsSent => MsgBox == 2;
     public bool IsReceived => !IsSent;
     public string DisplayBody => string.IsNullOrEmpty(Body) ? "[Media message]" : Body;

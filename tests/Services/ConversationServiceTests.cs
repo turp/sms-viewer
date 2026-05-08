@@ -17,6 +17,9 @@ public class ConversationServiceTests
     private static IMessage Sms(string address, string contact, long date, string body, int type = 1) =>
         new SmsMessage(address, date, type, body, 1, -1, "Jan 1", contact);
 
+    private static IMessage Mms(string address, string contact, long date, string body, params string[] addrs) =>
+        new MmsMessage(address, date, body, 1, 1, "Jan 1", contact, []) { Addrs = addrs };
+
     private static Mock<ISmsRepository> RepoWith(params IMessage[] messages)
     {
         var mock = new Mock<ISmsRepository>();
@@ -136,6 +139,21 @@ public class ConversationServiceTests
 
         Assert.Single(result);
         Assert.Equal(3, result[0].MessageCount);
+    }
+
+    [Fact]
+    public async Task Summaries_RcsGroupWithUnknownContact_ResolvesParticipantNamesFromAddrs()
+    {
+        var repo = RepoWith(
+            Sms("111", "Alice", 1000, "hi"),
+            Mms("rcs@group", "(Unknown)", 2000, "group msg", "111", "222"));
+        var service = new ConversationService(repo.Object);
+
+        var result = await service.GetConversationSummariesAsync(AnyStream());
+
+        var group = result.First(s => s.Address == "rcs@group");
+        Assert.Contains("Alice", group.DisplayName);
+        Assert.Contains("222", group.DisplayName);
     }
 
     // ── GetConversationMessagesAsync ──────────────────────────────────────

@@ -10,6 +10,10 @@ The system SHALL display a scrollable list of conversations in a left pane, sort
 - **WHEN** a conversation is listed
 - **THEN** it SHALL display the contact name if available, otherwise the phone number address
 
+#### Scenario: Unknown sentinel falls back to phone number
+- **WHEN** a conversation's contact name is `(Unknown)`
+- **THEN** the conversation list SHALL display the phone number address instead of `(Unknown)`
+
 #### Scenario: Each conversation shows last message preview
 - **WHEN** a conversation is listed
 - **THEN** it SHALL display a truncated preview of the most recent message body

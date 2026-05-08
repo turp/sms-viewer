@@ -9,7 +9,7 @@ public record ConversationSummary(
     int MessageCount)
 {
     public string DisplayName =>
-        string.IsNullOrWhiteSpace(ContactName) || ContactName == "null"
+        string.IsNullOrWhiteSpace(ContactName) || ContactName == "null" || ContactName == "(Unknown)"
             ? Address
             : ContactName;
 }

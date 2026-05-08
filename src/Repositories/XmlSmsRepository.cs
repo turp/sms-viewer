@@ -71,6 +71,7 @@ public class XmlSmsRepository : ISmsRepository
         string contactName = reader.GetAttribute("contact_name") ?? string.Empty;
 
         var parts = new List<MmsPart>();
+        var addrs = new List<string>();
 
         if (!reader.IsEmptyElement)
         {
@@ -88,10 +89,16 @@ public class XmlSmsRepository : ISmsRepository
                         reader.GetAttribute("data") ?? string.Empty
                     ));
                 }
+                else if (reader.NodeType == XmlNodeType.Element && reader.Name == "addr")
+                {
+                    var addrAddress = reader.GetAttribute("address");
+                    if (!string.IsNullOrEmpty(addrAddress) && !addrAddress.Contains('@'))
+                        addrs.Add(addrAddress);
+                }
             }
         }
 
         string body = parts.FirstOrDefault(p => p.ContentType == "text/plain")?.Text ?? string.Empty;
-        return new MmsMessage(address, date, body, read, msgBox, readableDate, contactName, parts);
+        return new MmsMessage(address, date, body, read, msgBox, readableDate, contactName, parts) { Addrs = addrs };
     }
 }
