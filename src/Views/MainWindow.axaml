@@ -30,6 +30,19 @@
                 IsVisible="{Binding UpdateAvailable}"
                 Background="#1a6a1a"
                 Padding="10,6">
+            <Border.Styles>
+                <Style Selector="Button">
+                    <Setter Property="Foreground"   Value="White"/>
+                    <Setter Property="Background"   Value="#33FFFFFF"/>
+                    <Setter Property="BorderBrush"  Value="#66FFFFFF"/>
+                </Style>
+                <Style Selector="Button:pointerover /template/ ContentPresenter">
+                    <Setter Property="Background" Value="#55FFFFFF"/>
+                </Style>
+                <Style Selector="Button:pressed /template/ ContentPresenter">
+                    <Setter Property="Background" Value="#22FFFFFF"/>
+                </Style>
+            </Border.Styles>
             <StackPanel Orientation="Horizontal" Spacing="12">
                 <TextBlock Text="{Binding AvailableVersion, StringFormat='Version {0} is available'}"
                            Foreground="White"
