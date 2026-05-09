@@ -17,3 +17,18 @@ The system SHALL ensure the selected file exists and is accessible.
 - **WHEN** the selected file is deleted or moved before parsing begins
 - **THEN** the system SHALL show an error message to the user
 
+### Requirement: Save XML File
+The system SHALL provide a way for the user to choose a destination path and filename when saving an exported XML file.
+
+#### Scenario: Save dialog opens with suggested name
+- **WHEN** the system opens the save-file dialog for export
+- **THEN** the dialog SHALL suggest a default filename (e.g., `sms-export.xml`) and filter to `.xml` files
+
+#### Scenario: User selects save path
+- **WHEN** the user confirms a path in the save-file dialog
+- **THEN** the system SHALL write the exported XML to that path
+
+#### Scenario: User cancels save dialog
+- **WHEN** the user dismisses the save-file dialog without confirming
+- **THEN** the system SHALL return a null path and SHALL NOT write any file
+

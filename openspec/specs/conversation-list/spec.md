@@ -27,13 +27,25 @@ The system SHALL display a scrollable list of conversations in a left pane, sort
 - **THEN** the system SHALL make the conversation list available from summary data without requiring full thread data for all conversations to already be loaded
 
 ### Requirement: Conversation Selection
-The system SHALL allow the user to select a conversation from the list.
+The system SHALL allow the user to both view a conversation thread and independently mark conversations for export. Clicking a conversation row SHALL load its thread in the right pane. A checkbox on each conversation item SHALL independently control whether that conversation is included in an export operation. These two selection states are independent.
 
 #### Scenario: Selecting a conversation loads the thread
-- **WHEN** the user clicks a conversation in the left pane
+- **WHEN** the user clicks a conversation row in the left pane
 - **THEN** the right pane SHALL load and display the message thread for that conversation on demand
 
 #### Scenario: No conversation selected on initial load
 - **WHEN** the file has finished loading
 - **THEN** the right pane SHALL be empty until the user selects a conversation
+
+#### Scenario: Checkbox marks conversation for export
+- **WHEN** the user checks the checkbox on a conversation item
+- **THEN** that conversation SHALL be marked as selected for export
+
+#### Scenario: Checkbox state is independent of thread view
+- **WHEN** the user checks a conversation checkbox
+- **THEN** the thread pane SHALL NOT change its displayed conversation
+
+#### Scenario: Checkbox state persists across filter changes
+- **WHEN** the user applies a contact or date filter that hides a checked conversation
+- **THEN** that conversation's checked state SHALL be preserved when the filter is cleared
 
