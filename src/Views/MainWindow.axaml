@@ -145,6 +145,7 @@
                 <!-- Conversation list -->
                 <ListBox ItemsSource="{Binding FilteredConversations}"
                          SelectedItem="{Binding SelectedConversation}"
+                         Margin="4,0"
                          BorderThickness="0,0,1,0">
                     <ListBox.Styles>
                         <Style Selector="ListBoxItem">
