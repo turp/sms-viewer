@@ -99,6 +99,16 @@
                    Foreground="Red"
                    Margin="8,0,8,4" />
 
+        <!-- Footer -->
+        <Border DockPanel.Dock="Bottom"
+                BorderThickness="0,1,0,0"
+                Padding="10,4">
+            <TextBlock Text="{Binding FooterText}"
+                       FontSize="11"
+                       Opacity="0.5"
+                       HorizontalAlignment="Center" />
+        </Border>
+
         <!-- Two-pane layout -->
         <Grid ColumnDefinitions="250,4,*">
 
@@ -330,16 +340,6 @@
             </DockPanel>
 
         </Grid>
-
-        <!-- Footer -->
-        <Border DockPanel.Dock="Bottom"
-                BorderThickness="0,1,0,0"
-                Padding="10,4">
-            <TextBlock Text="{Binding FooterText}"
-                       FontSize="11"
-                       Opacity="0.5"
-                       HorizontalAlignment="Center" />
-        </Border>
 
     </DockPanel>
 
