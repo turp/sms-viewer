@@ -77,3 +77,7 @@ sms-viewer/
 ## License
 
 MIT
+
+## Credits
+
+- [Message](https://iconscout.com/icons/message) icon by [Adrian Syauqi](https://iconscout.com/contributors/adrian-syauqi) on [IconScout](https://iconscout.com)

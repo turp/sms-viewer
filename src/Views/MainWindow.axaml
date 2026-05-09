@@ -9,7 +9,8 @@
         mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
         x:Class="SmsViewer.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
+        <!-- Icon: "Message" by Adrian Syauqi on IconScout (https://iconscout.com/icons/message) -->
+        Icon="/Assets/icon.ico"
         Title="SMS Viewer"
         MinWidth="600" MinHeight="400">
 
