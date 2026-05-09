@@ -30,4 +30,20 @@ public class FilePickerService : IFilePickerService
 
         return files.FirstOrDefault()?.Path.LocalPath;
     }
+
+    public async Task<string?> PickSaveXmlFileAsync(string suggestedName)
+    {
+        var file = await _storageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Save SMS Export",
+            SuggestedFileName = suggestedName,
+            DefaultExtension = "xml",
+            FileTypeChoices = new[]
+            {
+                new FilePickerFileType("XML Files") { Patterns = new[] { "*.xml" } }
+            }
+        });
+
+        return file?.Path.LocalPath;
+    }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -16,9 +17,13 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly IConversationService _conversationService;
     private readonly IFilePickerService _filePickerService;
     private readonly IUpdateService? _updateService;
+    private readonly IExportService? _exportService;
     private bool _isLoading;
+    private bool _isExporting;
     private bool _isThreadLoading;
     private string? _errorMessage;
+    private string? _exportSuccessMessage;
+    private int _toastGeneration;
     private bool _updateAvailable;
     private string? _availableVersion;
     private ThemeDefinition _activeTheme = ThemeService.Current;
@@ -39,16 +44,19 @@ public partial class MainWindowViewModel : ViewModelBase
         OpenXmlFileCommand = null!;
         RestartToUpdateCommand = null!;
         DismissUpdateCommand = null!;
+        ExportSelectedCommand = null!;
     }
 
-    public MainWindowViewModel(IConversationService conversationService, IFilePickerService filePickerService, IUpdateService? updateService = null)
+    public MainWindowViewModel(IConversationService conversationService, IFilePickerService filePickerService, IUpdateService? updateService = null, IExportService? exportService = null)
     {
         _conversationService = conversationService;
         _filePickerService = filePickerService;
         _updateService = updateService;
+        _exportService = exportService;
         OpenXmlFileCommand = new AsyncRelayCommand(OpenXmlFileAsync);
         RestartToUpdateCommand = new AsyncRelayCommand(RestartToUpdateAsync);
         DismissUpdateCommand = new RelayCommand(() => UpdateAvailable = false);
+        ExportSelectedCommand = new AsyncRelayCommand(ExportSelectedAsync, () => HasSelectedConversations);
 
         if (_updateService != null)
             UpdateCheckTask = RunUpdateCheckAsync();
@@ -73,6 +81,12 @@ public partial class MainWindowViewModel : ViewModelBase
     public IAsyncRelayCommand OpenXmlFileCommand { get; }
     public IAsyncRelayCommand RestartToUpdateCommand { get; }
     public IRelayCommand DismissUpdateCommand { get; }
+    public IAsyncRelayCommand ExportSelectedCommand { get; }
+
+    public bool HasFileLoaded => _currentFilePath != null;
+
+    public bool HasSelectedConversations =>
+        _currentFilePath != null && Conversations.Any(c => c.IsSelected);
 
     /// <summary>Exposed so tests can await the async update check triggered on construction.</summary>
     public Task? UpdateCheckTask { get; private set; }
@@ -81,6 +95,18 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         get => _isLoading;
         set => SetProperty(ref _isLoading, value);
+    }
+
+    public bool IsExporting
+    {
+        get => _isExporting;
+        set => SetProperty(ref _isExporting, value);
+    }
+
+    public string? ExportSuccessMessage
+    {
+        get => _exportSuccessMessage;
+        set => SetProperty(ref _exportSuccessMessage, value);
     }
 
     public bool IsThreadLoading
@@ -183,6 +209,8 @@ public partial class MainWindowViewModel : ViewModelBase
         _filterToDate = string.Empty;     OnPropertyChanged(nameof(FilterToDate));
         _threadSearchText = string.Empty; OnPropertyChanged(nameof(ThreadSearchText));
 
+        foreach (var c in Conversations)
+            c.PropertyChanged -= OnConversationItemPropertyChanged;
         Conversations.Clear();
         FilteredConversations.Clear();
         FilteredMessages.Clear();
@@ -195,7 +223,11 @@ public partial class MainWindowViewModel : ViewModelBase
             await using var stream = File.OpenRead(filePath);
             var summaries = await _conversationService.GetConversationSummariesAsync(stream);
             foreach (var s in summaries)
-                Conversations.Add(new ConversationListItemViewModel(s));
+            {
+                var item = new ConversationListItemViewModel(s);
+                item.PropertyChanged += OnConversationItemPropertyChanged;
+                Conversations.Add(item);
+            }
             _currentFilePath = filePath;
             _conversationsLoaded = true;
             ApplyConversationFilter();
@@ -215,7 +247,10 @@ public partial class MainWindowViewModel : ViewModelBase
         finally
         {
             IsLoading = false;
+            OnPropertyChanged(nameof(HasFileLoaded));
             OnPropertyChanged(nameof(HasNoConversationResults));
+            OnPropertyChanged(nameof(HasSelectedConversations));
+            ExportSelectedCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -276,6 +311,58 @@ public partial class MainWindowViewModel : ViewModelBase
             FilteredMessages.Add(new MessageViewModel(m));
 
         OnPropertyChanged(nameof(HasNoMessageResults));
+    }
+
+    private void OnConversationItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ConversationListItemViewModel.IsSelected))
+        {
+            OnPropertyChanged(nameof(HasSelectedConversations));
+            ExportSelectedCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    private async Task ExportSelectedAsync()
+    {
+        if (_currentFilePath == null || _exportService == null) return;
+
+        var addresses = Conversations.Where(c => c.IsSelected).Select(c => c.Address).ToList();
+        if (addresses.Count == 0) return;
+
+        var suggestedName = $"sms-{DateTime.Now:yyyy-MM-dd-HHmm}.xml";
+        var savePath = await _filePickerService.PickSaveXmlFileAsync(suggestedName);
+        if (string.IsNullOrEmpty(savePath)) return;
+
+        ErrorMessage = null;
+        IsExporting = true;
+        try
+        {
+            await using var dest = File.Create(savePath);
+            await _exportService.ExportThreadsAsync(_currentFilePath, addresses, dest);
+
+            foreach (var c in Conversations)
+                c.IsSelected = false;
+
+            ShowToast($"Exported {addresses.Count} thread{(addresses.Count == 1 ? "" : "s")}.");
+        }
+        catch (Exception ex)
+        {
+            try { File.Delete(savePath); } catch { /* ignore cleanup failure */ }
+            ErrorMessage = $"Export failed: {ex.Message}";
+        }
+        finally
+        {
+            IsExporting = false;
+        }
+    }
+
+    private void ShowToast(string message)
+    {
+        ExportSuccessMessage = message;
+        var gen = ++_toastGeneration;
+        _ = Task.Delay(3000).ContinueWith(
+            _ => { if (_toastGeneration == gen) ExportSuccessMessage = null; },
+            TaskScheduler.FromCurrentSynchronizationContext());
     }
 
     private static long? ParseDateToMs(string? input)

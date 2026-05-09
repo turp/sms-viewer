@@ -33,8 +33,9 @@ public partial class App : Application
             var conversationService = new ConversationService(repository);
             var filePickerService = new FilePickerService(mainWindow.StorageProvider);
             var updateService = new UpdateService();
+            var exportService = new ExportService();
 
-            mainWindow.DataContext = new MainWindowViewModel(conversationService, filePickerService, updateService);
+            mainWindow.DataContext = new MainWindowViewModel(conversationService, filePickerService, updateService, exportService);
             desktop.MainWindow = mainWindow;
         }
 

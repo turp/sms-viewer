@@ -22,6 +22,7 @@
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
+    <Grid>
     <DockPanel>
 
         <!-- Update available banner -->
@@ -44,6 +45,8 @@
 
         <!-- Toolbar -->
         <DockPanel DockPanel.Dock="Top" Margin="8,6">
+
+            <!-- Theme selector — far right -->
             <ComboBox DockPanel.Dock="Right"
                       ItemsSource="{Binding AvailableThemes}"
                       SelectedItem="{Binding ActiveTheme}"
@@ -55,12 +58,38 @@
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>
+
+            <!-- Export area — right of center, left of theme selector -->
+            <StackPanel DockPanel.Dock="Right"
+                        Orientation="Horizontal"
+                        Spacing="8"
+                        VerticalAlignment="Center"
+                        Margin="0,0,12,0">
+                <ProgressBar IsIndeterminate="True"
+                             IsVisible="{Binding IsExporting}"
+                             Width="80" VerticalAlignment="Center" />
+                <!-- Panel keeps toolbar width stable while toggling; hidden until a file is loaded -->
+                <Panel IsVisible="{Binding HasFileLoaded}"
+                       VerticalAlignment="Center">
+                    <TextBlock IsVisible="{Binding !HasSelectedConversations}"
+                               Text="Select one or more threads to export"
+                               FontSize="12"
+                               Opacity="0.5"
+                               VerticalAlignment="Center" />
+                    <Button IsVisible="{Binding HasSelectedConversations}"
+                            Command="{Binding ExportSelectedCommand}"
+                            Content="Export selected…" />
+                </Panel>
+            </StackPanel>
+
+            <!-- Left side -->
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <Button Command="{Binding OpenXmlFileCommand}" Content="Open SMS Backup…" />
                 <ProgressBar IsIndeterminate="True"
                              IsVisible="{Binding IsLoading}"
                              Width="100" VerticalAlignment="Center" />
             </StackPanel>
+
         </DockPanel>
 
         <!-- Error banner -->
@@ -109,18 +138,24 @@
                          BorderThickness="0,0,1,0">
                     <ListBox.ItemTemplate>
                         <DataTemplate DataType="{x:Type vm:ConversationListItemViewModel}">
-                            <StackPanel Margin="6,4" Spacing="2">
-                                <TextBlock Text="{Binding DisplayName}"
-                                           FontWeight="SemiBold"
-                                           TextTrimming="CharacterEllipsis" />
-                                <TextBlock Text="{Binding LastMessagePreview}"
-                                           FontSize="11"
-                                           Opacity="0.7"
-                                           TextTrimming="CharacterEllipsis" />
-                                <TextBlock Text="{Binding LastMessageDate}"
-                                           FontSize="10"
-                                           Opacity="0.5" />
-                            </StackPanel>
+                            <DockPanel Margin="4,2">
+                                <CheckBox DockPanel.Dock="Left"
+                                          IsChecked="{Binding IsSelected}"
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,6,0" />
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding DisplayName}"
+                                               FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding LastMessagePreview}"
+                                               FontSize="11"
+                                               Opacity="0.7"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding LastMessageDate}"
+                                               FontSize="10"
+                                               Opacity="0.5" />
+                                </StackPanel>
+                            </DockPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
@@ -291,4 +326,20 @@
 
         </Grid>
     </DockPanel>
+
+    <!-- Toast notification -->
+    <Border IsVisible="{Binding ExportSuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Bottom"
+            Margin="0,0,0,24"
+            Background="#2d6a2d"
+            CornerRadius="6"
+            Padding="18,9"
+            IsHitTestVisible="False">
+        <TextBlock Text="{Binding ExportSuccessMessage}"
+                   Foreground="White"
+                   FontSize="13" />
+    </Border>
+
+    </Grid>
 </Window>

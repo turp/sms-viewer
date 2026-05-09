@@ -2,14 +2,22 @@ using SmsViewer.Models;
 
 namespace SmsViewer.ViewModels;
 
-public class ConversationListItemViewModel
+public class ConversationListItemViewModel : ViewModelBase
 {
+    private bool _isSelected;
+
     public string Address { get; }
     public string DisplayName { get; }
     public string LastMessagePreview { get; }
     public string LastMessageDate { get; }
     public long LastMessageDateUnixMs { get; }
     public int MessageCount { get; }
+
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set => SetProperty(ref _isSelected, value);
+    }
 
     public ConversationListItemViewModel(ConversationSummary summary)
     {

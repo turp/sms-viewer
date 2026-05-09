@@ -12,4 +12,10 @@ public interface IFilePickerService
     /// </summary>
     /// <returns>The absolute path to the selected file, or null if canceled.</returns>
     Task<string?> PickXmlFileAsync();
+
+    /// <summary>
+    /// Opens a save-file dialog and returns the chosen destination path.
+    /// </summary>
+    /// <returns>The absolute path chosen by the user, or null if canceled.</returns>
+    Task<string?> PickSaveXmlFileAsync(string suggestedName);
 }

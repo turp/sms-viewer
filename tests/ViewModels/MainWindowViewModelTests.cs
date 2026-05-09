@@ -6,6 +6,7 @@ using SmsViewer.Models;
 using SmsViewer.Services;
 using SmsViewer.ViewModels;
 using Xunit;
+using System.Linq;
 
 namespace SmsViewer.Tests.ViewModels;
 
@@ -203,5 +204,137 @@ public class MainWindowViewModelTests
             Assert.Null(vm.SelectedConversation);
         }
         finally { File.Delete(file); }
+    }
+
+    [Fact]
+    public async Task ExportSelectedCommand_DisabledBeforeAnyConversationChecked()
+    {
+        var file = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(file, "<smses/>");
+            var picker = new Mock<IFilePickerService>();
+            picker.Setup(p => p.PickXmlFileAsync()).ReturnsAsync(file);
+
+            var vm = new MainWindowViewModel(ServiceWith(MakeSummary()).Object, picker.Object, null, new Mock<IExportService>().Object);
+            await vm.OpenXmlFileCommand.ExecuteAsync(null)!;
+
+            Assert.False(vm.ExportSelectedCommand.CanExecute(null));
+        }
+        finally { File.Delete(file); }
+    }
+
+    [Fact]
+    public async Task ExportSelectedCommand_EnabledWhenConversationChecked()
+    {
+        var file = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(file, "<smses/>");
+            var picker = new Mock<IFilePickerService>();
+            picker.Setup(p => p.PickXmlFileAsync()).ReturnsAsync(file);
+
+            var vm = new MainWindowViewModel(ServiceWith(MakeSummary()).Object, picker.Object, null, new Mock<IExportService>().Object);
+            await vm.OpenXmlFileCommand.ExecuteAsync(null)!;
+            vm.Conversations[0].IsSelected = true;
+
+            Assert.True(vm.ExportSelectedCommand.CanExecute(null));
+        }
+        finally { File.Delete(file); }
+    }
+
+    [Fact]
+    public async Task ExportSelectedCommand_WhenSaveDialogCancelled_DoesNotCallExportService()
+    {
+        var file = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(file, "<smses/>");
+            var picker = new Mock<IFilePickerService>();
+            picker.Setup(p => p.PickXmlFileAsync()).ReturnsAsync(file);
+            picker.Setup(p => p.PickSaveXmlFileAsync(It.IsAny<string>())).ReturnsAsync((string?)null);
+
+            var exportService = new Mock<IExportService>();
+            var vm = new MainWindowViewModel(ServiceWith(MakeSummary()).Object, picker.Object, null, exportService.Object);
+            await vm.OpenXmlFileCommand.ExecuteAsync(null)!;
+            vm.Conversations[0].IsSelected = true;
+
+            await vm.ExportSelectedCommand.ExecuteAsync(null)!;
+
+            exportService.Verify(
+                e => e.ExportThreadsAsync(It.IsAny<string>(), It.IsAny<IEnumerable<string>>(), It.IsAny<Stream>()),
+                Times.Never);
+        }
+        finally { File.Delete(file); }
+    }
+
+    [Fact]
+    public async Task ExportSelectedCommand_WhenExportServiceThrows_SetsErrorMessage()
+    {
+        var file = Path.GetTempFileName();
+        var saveFile = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(file, "<smses/>");
+            var picker = new Mock<IFilePickerService>();
+            picker.Setup(p => p.PickXmlFileAsync()).ReturnsAsync(file);
+            picker.Setup(p => p.PickSaveXmlFileAsync(It.IsAny<string>())).ReturnsAsync(saveFile);
+
+            var exportService = new Mock<IExportService>();
+            exportService
+                .Setup(e => e.ExportThreadsAsync(It.IsAny<string>(), It.IsAny<IEnumerable<string>>(), It.IsAny<Stream>()))
+                .ThrowsAsync(new IOException("Disk full"));
+
+            var vm = new MainWindowViewModel(ServiceWith(MakeSummary()).Object, picker.Object, null, exportService.Object);
+            await vm.OpenXmlFileCommand.ExecuteAsync(null)!;
+            vm.Conversations[0].IsSelected = true;
+
+            await vm.ExportSelectedCommand.ExecuteAsync(null)!;
+
+            Assert.NotNull(vm.ErrorMessage);
+        }
+        finally
+        {
+            File.Delete(file);
+            try { File.Delete(saveFile); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task ExportSelectedCommand_PassesSelectedAddressesToExportService()
+    {
+        var file = Path.GetTempFileName();
+        var saveFile = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(file, "<smses/>");
+            var picker = new Mock<IFilePickerService>();
+            picker.Setup(p => p.PickXmlFileAsync()).ReturnsAsync(file);
+            picker.Setup(p => p.PickSaveXmlFileAsync(It.IsAny<string>())).ReturnsAsync(saveFile);
+
+            IEnumerable<string>? capturedAddresses = null;
+            var exportService = new Mock<IExportService>();
+            exportService
+                .Setup(e => e.ExportThreadsAsync(It.IsAny<string>(), It.IsAny<IEnumerable<string>>(), It.IsAny<Stream>()))
+                .Callback<string, IEnumerable<string>, Stream>((_, addrs, _) => capturedAddresses = addrs)
+                .Returns(Task.CompletedTask);
+
+            var vm = new MainWindowViewModel(
+                ServiceWith(MakeSummary("Alice", "111"), MakeSummary("Bob", "222")).Object,
+                picker.Object, null, exportService.Object);
+            await vm.OpenXmlFileCommand.ExecuteAsync(null)!;
+            vm.Conversations[0].IsSelected = true; // Alice
+
+            await vm.ExportSelectedCommand.ExecuteAsync(null)!;
+
+            Assert.NotNull(capturedAddresses);
+            Assert.Single(capturedAddresses!);
+            Assert.Contains("111", capturedAddresses!);
+        }
+        finally
+        {
+            File.Delete(file);
+            try { File.Delete(saveFile); } catch { }
+        }
     }
 }
