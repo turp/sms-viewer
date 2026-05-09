@@ -21,6 +21,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private string? _errorMessage;
     private bool _updateAvailable;
     private string? _availableVersion;
+    private ThemeDefinition _activeTheme = ThemeService.Current;
     private ConversationListItemViewModel? _selectedConversation;
     private string _searchText = string.Empty;
     private string _filterFromDate = string.Empty;
@@ -51,6 +52,18 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (_updateService != null)
             UpdateCheckTask = RunUpdateCheckAsync();
+    }
+
+    public IReadOnlyList<ThemeDefinition> AvailableThemes => ThemeService.AvailableThemes;
+
+    public ThemeDefinition ActiveTheme
+    {
+        get => _activeTheme;
+        set
+        {
+            if (SetProperty(ref _activeTheme, value) && value != null)
+                ThemeService.Apply(value);
+        }
     }
 
     public ObservableCollection<ConversationListItemViewModel> Conversations { get; } = new();

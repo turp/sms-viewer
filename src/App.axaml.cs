@@ -26,6 +26,8 @@ public partial class App : Application
             // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
             DisableAvaloniaDataAnnotationValidation();
 
+            ThemeService.Apply(ThemeService.Load());
+
             var mainWindow = new MainWindow();
             var repository = new XmlSmsRepository();
             var conversationService = new ConversationService(repository);
