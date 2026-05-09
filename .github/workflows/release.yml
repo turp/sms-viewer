@@ -109,6 +109,7 @@ jobs:
           --repoUrl https://github.com/turp/sms-viewer
           --token ${{ secrets.GITHUB_TOKEN }}
           --outputDir dist/windows/
+          --channel win
           --tag ${{ github.ref_name }}
 
       - name: Publish Linux release to GitHub
@@ -117,4 +118,5 @@ jobs:
           --repoUrl https://github.com/turp/sms-viewer
           --token ${{ secrets.GITHUB_TOKEN }}
           --outputDir dist/linux/
+          --channel linux
           --tag ${{ github.ref_name }}
