@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
 using SmsViewer.Models;
@@ -60,6 +61,19 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (_updateService != null)
             UpdateCheckTask = RunUpdateCheckAsync();
+    }
+
+    public string FooterText { get; } = BuildFooterText();
+
+    private static string BuildFooterText()
+    {
+        var asm = Assembly.GetExecutingAssembly();
+        var version = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0";
+        var plusIdx = version.IndexOf('+');
+        if (plusIdx >= 0) version = version[..plusIdx];
+        var buildDate = asm.GetCustomAttributes<AssemblyMetadataAttribute>()
+            .FirstOrDefault(a => a.Key == "BuildDate")?.Value ?? "unknown";
+        return $"SMS Viewer  |  v{version}  |  Built {buildDate}";
     }
 
     public IReadOnlyList<ThemeDefinition> AvailableThemes => ThemeService.AvailableThemes;
